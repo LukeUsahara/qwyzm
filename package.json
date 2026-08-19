@@ -1,0 +1,18 @@
+{
+  "name": "qwyzm",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.14.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @qwyzm/web --filter @qwyzm/api dev",
+    "lint": "pnpm -r --if-present lint",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "build": "pnpm -r --if-present build",
+    "db:migrate": "pnpm --filter @qwyzm/db migrate",
+    "db:seed": "pnpm --filter @qwyzm/db seed && pnpm --filter @qwyzm/api seed-admin"
+  }
+}

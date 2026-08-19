@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: qwyzm-postgres
+    environment:
+      POSTGRES_USER: qwyzm
+      POSTGRES_PASSWORD: qwyzm
+      POSTGRES_DB: qwyzm
+    ports:
+      - "5434:5432"
+    volumes:
+      - qwyzm_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qwyzm -d qwyzm"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  qwyzm_pg:

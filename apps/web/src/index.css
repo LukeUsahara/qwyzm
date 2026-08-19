@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "IBM Plex Sans JP", "Hiragino Sans", sans-serif;
+  --font-serif: "Zen Antique", "Yu Mincho", serif;
+  --color-ink: #0b0d10;
+  --color-panel: #14181f;
+  --color-panel-2: #1c222c;
+  --color-paper: #f4ecd8;
+  --color-muted: #9aa3b2;
+  --color-line: #2a3340;
+  --color-buzz: #d0122d;
+  --color-buzz-dark: #8a0c1e;
+  --color-gold: #d4b06a;
+  --color-ok: #7dcfb6;
+  --color-bad: #e85d4c;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-family: var(--font-sans);
+}
+
+button,
+input {
+  font-family: inherit;
+}
