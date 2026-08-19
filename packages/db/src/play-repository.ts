@@ -94,6 +94,8 @@ export function createDrizzlePlayRepository(
       }
 
       const scoreByGame = new Map(playerRows.map((row) => [row.gameId, row.score]));
+      const rankByGame = new Map(playerRows.map((row) => [row.gameId, row.rank]));
+      const seatByGame = new Map(playerRows.map((row) => [row.gameId, row.seatIndex]));
 
       return gameRows
         .map((row): StoredGame => {
@@ -103,12 +105,14 @@ export function createDrizzlePlayRepository(
           const settings = row.settings ?? {};
           return {
             id: row.id,
-            mode: "solo",
+            mode: row.mode === "custom_room" ? "custom_room" : "solo",
             startedAt: toIso(row.startedAt),
             endedAt: toIso(row.endedAt),
             selectedGenreIds: settings.selectedGenreIds ?? [],
             questionCount: row.questionCount,
             score: scoreByGame.get(row.id) ?? 0,
+            rank: rankByGame.get(row.id) ?? null,
+            seatIndex: seatByGame.get(row.id) ?? 0,
             attempts,
           };
         })
@@ -123,58 +127,84 @@ export function createDrizzlePlayRepository(
 
       await db.transaction(async (tx) => {
         const [existing] = await tx.select().from(games).where(eq(games.id, game.id));
-        if (existing !== undefined && existing.hostUserId !== userId) {
-          throw new Error("game belongs to another user");
+        if (existing === undefined) {
+          await tx.insert(games).values({
+            id: game.id,
+            mode: game.mode,
+            hostUserId: userId,
+            questionCount: game.questionCount,
+            winCondition: SOLO_DEFAULT_SETTINGS.winCondition,
+            targetPoints: SOLO_DEFAULT_SETTINGS.targetPoints,
+            correctPoints: SOLO_DEFAULT_SETTINGS.correctPoints,
+            missPenalty: SOLO_DEFAULT_SETTINGS.missPenalty,
+            missPoints: SOLO_DEFAULT_SETTINGS.missPoints,
+            wrongAnswerRule: SOLO_DEFAULT_SETTINGS.wrongAnswerRule,
+            revealSpeed: SOLO_DEFAULT_SETTINGS.revealSpeed,
+            startedAt: toDate(game.startedAt),
+            endedAt: toDate(game.endedAt),
+            settings: { selectedGenreIds: [...game.selectedGenreIds] },
+          });
+        } else {
+          await tx
+            .update(games)
+            .set({
+              mode: game.mode,
+              questionCount: Math.max(existing.questionCount, game.questionCount),
+              endedAt: toDate(game.endedAt),
+            })
+            .where(eq(games.id, game.id));
         }
-        await tx.delete(games).where(eq(games.id, game.id));
 
-        await tx.insert(games).values({
-          id: game.id,
-          mode: "solo",
-          hostUserId: userId,
-          questionCount: game.attempts.length,
-          winCondition: SOLO_DEFAULT_SETTINGS.winCondition,
-          targetPoints: SOLO_DEFAULT_SETTINGS.targetPoints,
-          correctPoints: SOLO_DEFAULT_SETTINGS.correctPoints,
-          missPenalty: SOLO_DEFAULT_SETTINGS.missPenalty,
-          missPoints: SOLO_DEFAULT_SETTINGS.missPoints,
-          wrongAnswerRule: SOLO_DEFAULT_SETTINGS.wrongAnswerRule,
-          revealSpeed: SOLO_DEFAULT_SETTINGS.revealSpeed,
-          startedAt: toDate(game.startedAt),
-          endedAt: toDate(game.endedAt),
-          settings: { selectedGenreIds: [...game.selectedGenreIds] },
-        });
+        await tx
+          .delete(questionPlayRecords)
+          .where(and(eq(questionPlayRecords.gameId, game.id), eq(questionPlayRecords.userId, userId)));
+        await tx
+          .delete(gamePlayers)
+          .where(and(eq(gamePlayers.gameId, game.id), eq(gamePlayers.userId, userId)));
 
         await tx.insert(gamePlayers).values({
           gameId: game.id,
           userId,
-          seatIndex: 0,
+          seatIndex: game.seatIndex,
           displayName: user.name,
-          isHost: true,
+          isHost: existing === undefined || existing.hostUserId === userId,
           score: game.score,
-          rank: 1,
+          rank: game.rank,
           withdrawn: false,
         });
 
         for (const attempt of game.attempts) {
-          const [question] = await tx
-            .insert(gameQuestions)
-            .values({
-              gameId: game.id,
-              questionId: attempt.questionId,
-              orderIndex: attempt.questionIndex,
-            })
-            .returning({ id: gameQuestions.id });
-          if (question === undefined) {
-            throw new Error("failed to store game question");
+          const [found] = await tx
+            .select({ id: gameQuestions.id })
+            .from(gameQuestions)
+            .where(
+              and(
+                eq(gameQuestions.gameId, game.id),
+                eq(gameQuestions.orderIndex, attempt.questionIndex),
+              ),
+            );
+          let questionId = found?.id;
+          if (questionId === undefined) {
+            const [question] = await tx
+              .insert(gameQuestions)
+              .values({
+                gameId: game.id,
+                questionId: attempt.questionId,
+                orderIndex: attempt.questionIndex,
+              })
+              .returning({ id: gameQuestions.id });
+            if (question === undefined) {
+              throw new Error("failed to store game question");
+            }
+            questionId = question.id;
           }
           await tx.insert(questionPlayRecords).values({
             id: attempt.id,
             gameId: game.id,
-            gameQuestionId: question.id,
+            gameQuestionId: questionId,
             questionId: attempt.questionId,
             userId,
-            playerSeat: 0,
+            playerSeat: game.seatIndex,
             result: attempt.result,
             questionBody: attempt.questionBody,
             answerRaw: attempt.answerRaw,
@@ -198,11 +228,25 @@ export function createDrizzlePlayRepository(
         .select({ gameId: gamePlayers.gameId })
         .from(gamePlayers)
         .where(eq(gamePlayers.userId, userId));
-      const ids = owned.map((row) => row.gameId);
+      const ids = [...new Set(owned.map((row) => row.gameId))];
       if (ids.length === 0) {
         return;
       }
-      await db.delete(games).where(inArray(games.id, ids));
+      await db
+        .delete(questionPlayRecords)
+        .where(
+          and(inArray(questionPlayRecords.gameId, ids), eq(questionPlayRecords.userId, userId)),
+        );
+      await db.delete(gamePlayers).where(eq(gamePlayers.userId, userId));
+      const remaining = await db
+        .select({ gameId: gamePlayers.gameId })
+        .from(gamePlayers)
+        .where(inArray(gamePlayers.gameId, ids));
+      const still = new Set(remaining.map((row) => row.gameId));
+      const empty = ids.filter((id) => !still.has(id));
+      if (empty.length > 0) {
+        await db.delete(games).where(inArray(games.id, empty));
+      }
     },
   };
 }

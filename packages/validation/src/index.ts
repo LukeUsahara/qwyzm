@@ -92,12 +92,14 @@ export const storedAttemptSchema = z.object({
 
 export const storedGameSchema = z.object({
   id: uuidSchema,
-  mode: z.literal("solo"),
+  mode: z.enum(["solo", "custom_room"]),
   startedAt: isoDateSchema,
   endedAt: isoDateSchema,
   selectedGenreIds: z.array(uuidSchema),
   questionCount: questionCountSchema,
   score: z.number().int(),
+  rank: z.number().int().nullable().optional(),
+  seatIndex: z.number().int().min(0).optional(),
   attempts: z.array(storedAttemptSchema).min(1),
 });
 

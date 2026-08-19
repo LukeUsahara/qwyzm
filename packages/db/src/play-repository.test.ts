@@ -75,12 +75,14 @@ function game(
 ): StoredGame {
   return {
     id,
-    mode: "solo",
+    mode: extra?.mode ?? "solo",
     startedAt: "2026-01-01T00:00:00.000Z",
     endedAt: extra?.endedAt ?? "2026-01-01T00:05:00.000Z",
     selectedGenreIds: extra?.selectedGenreIds ?? [],
     questionCount: userAttempts.length,
     score: extra?.score ?? 1,
+    rank: extra?.rank ?? 1,
+    seatIndex: extra?.seatIndex ?? 0,
     attempts: userAttempts,
   };
 }
@@ -171,6 +173,56 @@ describe("drizzle PlayRepository", () => {
     expect(loaded).toHaveLength(1);
     expect(loaded[0]?.attempts[0]?.buzzCharIndex).toBe(6);
     expect(loaded[0]?.attempts[0]?.result).toBe("correct");
+    await client.close();
+  });
+
+  it("lets two users store the same custom_room match without mixing attempts", async () => {
+    const { client, db } = await createSeededDb();
+    const alice = createDrizzlePlayRepository(db, USER_A);
+    const bob = createDrizzlePlayRepository(db, USER_B);
+    const matchId = "c0a80400-0000-4000-8000-00000000aa01";
+    await alice.saveGame(
+      game(
+        matchId,
+        [
+          attempt({
+            id: "c0a80500-0000-4000-8000-00000000aa01",
+            gameId: matchId,
+            result: "correct",
+            buzzCharIndex: 4,
+          }),
+        ],
+        { mode: "custom_room", score: 1, seatIndex: 0, rank: 1 },
+      ),
+    );
+    await bob.saveGame(
+      game(
+        matchId,
+        [
+          attempt({
+            id: "c0a80500-0000-4000-8000-00000000aa02",
+            gameId: matchId,
+            result: "incorrect",
+            buzzCharIndex: 9,
+            questionId: PEARL,
+            questionIndex: 1,
+            questionBody: pearl.body,
+            genreIds: [...pearl.genreIds],
+          }),
+        ],
+        { mode: "custom_room", score: 0, seatIndex: 1, rank: 2 },
+      ),
+    );
+    const aliceGames = await alice.listGames();
+    const bobGames = await bob.listGames();
+    expect(aliceGames).toHaveLength(1);
+    expect(aliceGames[0]?.mode).toBe("custom_room");
+    expect(aliceGames[0]?.attempts).toHaveLength(1);
+    expect(aliceGames[0]?.attempts[0]?.result).toBe("correct");
+    expect(aliceGames[0]?.score).toBe(1);
+    expect(bobGames[0]?.attempts[0]?.result).toBe("incorrect");
+    expect(bobGames[0]?.score).toBe(0);
+    expect(bobGames[0]?.seatIndex).toBe(1);
     await client.close();
   });
 });

@@ -62,6 +62,8 @@ function game(id: string, endedAt: string, attempts: StoredAttempt[]): StoredGam
     selectedGenreIds: [],
     questionCount: attempts.length,
     score: attempts.filter((a) => a.result === "correct").length,
+    rank: 1,
+    seatIndex: 0,
     attempts: attempts.map((a) => ({ ...a, gameId: id })),
   };
 }
@@ -279,6 +281,28 @@ describe("compareQuestionBuzz", () => {
     expect(comparison?.previousAverage).toBeCloseTo(10.4);
     expect(comparison?.delta).toBeCloseTo(-4.6);
     expect(describeQuestionBuzz(comparison!)).toBe("平均より4.6文字遅く押しました");
+  });
+
+  it("includes custom_room history for the same questionId only", () => {
+    const previous = [
+      game("solo-old", "2026-01-01T00:00:00.000Z", [
+        attempt({ id: "p1", questionId: QUESTION_A, buzzCharIndex: 12 }),
+      ]),
+      {
+        ...game("match-old", "2026-01-02T00:00:00.000Z", [
+          attempt({ id: "p2", questionId: QUESTION_A, buzzCharIndex: 8 }),
+          attempt({ id: "p3", questionId: QUESTION_B, buzzCharIndex: 1 }),
+        ]),
+        mode: "custom_room" as const,
+      },
+    ];
+    const [questionA] = compareQuestionBuzz(
+      [attempt({ id: "c1", questionId: QUESTION_A, buzzCharIndex: 6 })],
+      previous,
+    );
+    expect(questionA?.previousSampleCount).toBe(2);
+    expect(questionA?.previousAverage).toBe(10);
+    expect(questionA?.delta).toBe(4);
   });
 });
 

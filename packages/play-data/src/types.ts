@@ -62,14 +62,18 @@ export type StoredAttempt = {
   closeCount: number;
 };
 
+export type StoredGameMode = "solo" | "custom_room";
+
 export type StoredGame = {
   id: string;
-  mode: "solo";
+  mode: StoredGameMode;
   startedAt: string;
   endedAt: string;
   selectedGenreIds: string[];
   questionCount: number;
   score: number;
+  rank: number | null;
+  seatIndex: number;
   attempts: StoredAttempt[];
 };
 

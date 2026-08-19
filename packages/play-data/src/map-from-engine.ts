@@ -1,5 +1,5 @@
 import type { QuestionPlayRecord } from "@qwyzm/game-core";
-import type { StoredAttempt, StoredGame } from "./types.ts";
+import type { StoredAttempt, StoredGame, StoredGameMode } from "./types.ts";
 
 function newId(): string {
   return crypto.randomUUID();
@@ -28,22 +28,42 @@ export function attemptsFromPlayRecords(
   }));
 }
 
+export function normalizeStoredGame(game: StoredGame): StoredGame {
+  return {
+    ...game,
+    mode: game.mode === "custom_room" ? "custom_room" : "solo",
+    rank: game.rank ?? null,
+    seatIndex: game.seatIndex ?? 0,
+    selectedGenreIds: [...game.selectedGenreIds],
+    attempts: game.attempts.map((attempt) => ({
+      ...attempt,
+      genreIds: [...attempt.genreIds],
+    })),
+  };
+}
+
 export function createStoredGame(input: {
   id: string;
+  mode?: StoredGameMode;
   startedAt: string;
   endedAt?: string;
   selectedGenreIds: string[];
+  questionCount?: number;
   score: number;
+  rank?: number | null;
+  seatIndex?: number;
   records: readonly QuestionPlayRecord[];
 }): StoredGame {
   return {
     id: input.id,
-    mode: "solo",
+    mode: input.mode ?? "solo",
     startedAt: input.startedAt,
     endedAt: input.endedAt ?? new Date().toISOString(),
     selectedGenreIds: [...input.selectedGenreIds],
-    questionCount: input.records.length,
+    questionCount: input.questionCount ?? input.records.length,
     score: input.score,
+    rank: input.rank ?? null,
+    seatIndex: input.seatIndex ?? 0,
     attempts: attemptsFromPlayRecords(input.id, input.records),
   };
 }

@@ -13,6 +13,7 @@ import {
   hashSeed,
   isOfficialQuestion,
   mulberry32,
+  normalizeStoredGame,
   questionsFromResolvedIds,
   resolveQuestionSetIds,
   toPlayQuestion,
@@ -206,7 +207,13 @@ export function createApp(
       return c.json({ error: "invalid game" }, 400);
     }
     try {
-      await extras.plays(session.user.id).saveGame(parsed.data);
+      await extras.plays(session.user.id).saveGame(
+        normalizeStoredGame({
+          ...parsed.data,
+          rank: parsed.data.rank ?? null,
+          seatIndex: parsed.data.seatIndex ?? 0,
+        }),
+      );
     } catch {
       return c.json({ error: "failed to save game" }, 400);
     }

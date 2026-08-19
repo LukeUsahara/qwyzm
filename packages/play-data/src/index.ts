@@ -7,6 +7,7 @@ export type {
   PlayDataDocument,
   StoredAttempt,
   StoredGame,
+  StoredGameMode,
 } from "./types.ts";
 export { toPlayQuestion } from "./types.ts";
 export {
@@ -54,7 +55,7 @@ export {
 } from "./json-repository.ts";
 export type { KeyValueStore } from "./json-repository.ts";
 
-export { attemptsFromPlayRecords, createStoredGame } from "./map-from-engine.ts";
+export { attemptsFromPlayRecords, createStoredGame, normalizeStoredGame } from "./map-from-engine.ts";
 
 export {
   analyzeSession,

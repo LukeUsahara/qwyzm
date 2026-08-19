@@ -313,7 +313,9 @@ export function App() {
             displayName={displayName}
             ruleSet={sessionRuleSet}
             genres={catalog.genres}
+            userId={userId}
             onClose={openHome}
+            onSaved={() => setHistoryTick((token) => token + 1)}
           />
         ) : play && view ? (
           <PlayScreen

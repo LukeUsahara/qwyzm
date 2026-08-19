@@ -1,5 +1,6 @@
 import type { PlayDataDocument, StoredGame } from "./types.ts";
 import type { PlayRepository } from "./repository.ts";
+import { normalizeStoredGame } from "./map-from-engine.ts";
 
 export const PLAY_DATA_STORAGE_KEY = "qwyzm.play-data.v1";
 
@@ -48,7 +49,7 @@ export function createJsonPlayRepository(
 
   return {
     async listGames() {
-      return [...read().games].sort((a, b) =>
+      return [...read().games].map(normalizeStoredGame).sort((a, b) =>
         a.endedAt < b.endedAt ? -1 : a.endedAt > b.endedAt ? 1 : 0,
       );
     },

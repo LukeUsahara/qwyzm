@@ -15,15 +15,18 @@ import {
   type SignalingEvent,
 } from "../../rooms/connection.ts";
 import { VersusPlayContainer } from "../play/VersusPlayContainer.tsx";
+import { useSavePlay } from "../../play-data/useSavePlay.ts";
 
 type Props = {
   displayName: string;
   ruleSet: RuleSet;
   genres: Genre[];
+  userId: string | null;
   onClose: () => void;
+  onSaved?: () => void;
 };
 
-export function RoomScreen({ displayName, ruleSet, genres, onClose }: Props) {
+export function RoomScreen({ displayName, ruleSet, genres, userId, onClose, onSaved }: Props) {
   const [codeInput, setCodeInput] = useState("");
   const [room, setRoom] = useState<RoomSnapshot | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
@@ -32,12 +35,18 @@ export function RoomScreen({ displayName, ruleSet, genres, onClose }: Props) {
   const [matchView, setMatchView] = useState<PublicGameView | null>(null);
   const [matchEnded, setMatchEnded] = useState(false);
   const [records, setRecords] = useState<QuestionPlayRecord[]>([]);
+  const [matchId, setMatchId] = useState<string | null>(null);
+  const [matchStartedAt, setMatchStartedAt] = useState<string | null>(null);
+  const [questionCount, setQuestionCount] = useState(ruleSet.questionCount);
+  const [matchScore, setMatchScore] = useState(0);
+  const [matchRank, setMatchRank] = useState<number | null>(null);
   const conn = useRef<ReturnType<typeof createRoomConnection> | null>(null);
   const clockRef = useRef(createOffsetSyncedClock({ now: () => Date.now() }, 0));
   const seqRef = useRef(0);
   const inputRef = useRef("");
   const lastInputAtRef = useRef(0);
   const roomRef = useRef<RoomSnapshot | null>(null);
+  const playerIdRef = useRef<string | null>(null);
   const tokenRef = useRef<string | null>(null);
   const resumedRef = useRef(false);
   const playableRules = useMemo(() => roomRuleSet(ruleSet), [ruleSet]);
@@ -52,6 +61,7 @@ export function RoomScreen({ displayName, ruleSet, genres, onClose }: Props) {
         setRoom(event.room);
         roomRef.current = event.room;
         setPlayerId(event.playerId);
+        playerIdRef.current = event.playerId;
         rememberReconnect(event.room.code, event.reconnectToken);
         tokenRef.current = event.reconnectToken;
         setError(null);
@@ -72,7 +82,8 @@ export function RoomScreen({ displayName, ruleSet, genres, onClose }: Props) {
       if (event.type === "kicked") {
         setRoom(null);
         roomRef.current = null;
-        setPlayerId(null);
+          setPlayerId(null);
+          playerIdRef.current = null;
         setMatchView(null);
         setError("ホストに退出させられました");
         return;
@@ -80,6 +91,9 @@ export function RoomScreen({ displayName, ruleSet, genres, onClose }: Props) {
       if (event.type === "match_start") {
         setMatchEnded(false);
         setRecords([]);
+        setMatchId(event.matchId);
+        setMatchStartedAt(new Date(event.startedAt).toISOString());
+        setQuestionCount(event.questionCount);
         return;
       }
       if (event.type === "state") {
@@ -90,6 +104,9 @@ export function RoomScreen({ displayName, ruleSet, genres, onClose }: Props) {
       if (event.type === "match_end") {
         setMatchEnded(true);
         setRecords(event.myRecords);
+        const standing = event.standings.find((item) => item.id === playerIdRef.current);
+        setMatchScore(standing?.score ?? 0);
+        setMatchRank(standing?.rank ?? null);
         return;
       }
       if (event.type === "error") {
@@ -168,6 +185,27 @@ export function RoomScreen({ displayName, ruleSet, genres, onClose }: Props) {
     conn.current?.send({ type: "answer_submit", text: inputRef.current, clientTime });
   };
 
+  const selectedGenreIds =
+    (room?.ruleSet ?? ruleSet).genreFilter.allMain
+      ? []
+      : [...(room?.ruleSet ?? ruleSet).genreFilter.selectedGenreIds];
+  const selfSeat = room?.players.find((player) => player.id === playerId)?.seatIndex ?? 0;
+  const { analysis, saveError } = useSavePlay({
+    gameId: matchId,
+    startedAt: matchStartedAt,
+    selectedGenreIds,
+    genres,
+    userId,
+    mode: "custom_room",
+    score: matchScore,
+    rank: matchRank,
+    seatIndex: selfSeat,
+    questionCount,
+    records,
+    active: matchEnded,
+    onSaved,
+  });
+
   const host = playerId !== null && room?.hostPlayerId === playerId;
 
   if (playerId !== null && matchView !== null) {
@@ -180,6 +218,8 @@ export function RoomScreen({ displayName, ruleSet, genres, onClose }: Props) {
         onExit={onClose}
         ended={matchEnded}
         records={records}
+        analysis={analysis}
+        saveError={saveError}
       />
     );
   }

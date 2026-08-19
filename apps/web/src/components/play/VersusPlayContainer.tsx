@@ -1,4 +1,5 @@
 import type { PlayerIntent, PublicGameView, QuestionPlayRecord } from "@qwyzm/game-core";
+import type { SessionAnalysis } from "@qwyzm/play-data";
 import type { Genre } from "@qwyzm/shared";
 import { gameViewFromPublic } from "../../game/public-view-map.ts";
 import { PlayScreen } from "./PlayScreen.tsx";
@@ -11,6 +12,8 @@ type Props = {
   onExit: () => void;
   ended?: boolean;
   records?: QuestionPlayRecord[];
+  analysis?: SessionAnalysis | null;
+  saveError?: string | null;
 };
 
 export function VersusPlayContainer({
@@ -21,6 +24,8 @@ export function VersusPlayContainer({
   onExit,
   ended = false,
   records = [],
+  analysis = null,
+  saveError = null,
 }: Props) {
   const mapped = gameViewFromPublic(ended ? { ...view, phase: "gameOver" } : view, records);
   return (
@@ -28,8 +33,8 @@ export function VersusPlayContainer({
       playerId={playerId}
       view={mapped}
       sendIntent={sendIntent}
-      analysis={null}
-      saveError={null}
+      analysis={analysis}
+      saveError={saveError}
       genres={genres}
       showQuestionGenre={false}
       onExit={onExit}
