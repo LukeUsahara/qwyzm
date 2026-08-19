@@ -6,6 +6,7 @@ import { migrate } from "drizzle-orm/pglite/migrator";
 import { sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { FIXTURE_QUESTIONS, GENRE, GENRES, filterCatalogByGenres } from "@qwyzm/play-data";
+import { DEFAULT_GENRE_PLAY_FILTER } from "@qwyzm/shared";
 import * as schema from "./schema.ts";
 import { createDrizzleQuestionRepository } from "./question-repository.ts";
 import { seedCatalog } from "./seed.ts";
@@ -15,6 +16,11 @@ import { genres, questionAnswers, questions } from "./schema.ts";
 const PEARL = "c0a80100-0000-4000-8000-000000000002";
 const FUJI = "c0a80100-0000-4000-8000-000000000001";
 const GENJI = "c0a80100-0000-4000-8000-000000000006";
+const MAIN_PLAY_COUNT = filterCatalogByGenres(
+  FIXTURE_QUESTIONS,
+  GENRES,
+  DEFAULT_GENRE_PLAY_FILTER,
+).length;
 
 const migrationsFolder = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -81,7 +87,7 @@ describe("drizzle QuestionRepository", () => {
     const { client, db } = await createSeededDb();
     const repo = createDrizzleQuestionRepository(db as unknown as AppDb);
 
-    expect(await repo.listQuestions()).toHaveLength(FIXTURE_QUESTIONS.length);
+    expect(await repo.listQuestions()).toHaveLength(MAIN_PLAY_COUNT);
 
     const pearl = await repo.getQuestion(PEARL);
     expect(pearl?.primary.inputText).toBe("ぶたにしんじゅ");
@@ -119,9 +125,9 @@ describe("drizzle QuestionRepository", () => {
       status: "draft",
     });
     expect(draft.status).toBe("draft");
-    expect(await repo.listQuestions()).toHaveLength(FIXTURE_QUESTIONS.length);
+    expect(await repo.listQuestions()).toHaveLength(MAIN_PLAY_COUNT);
     expect(await repo.listQuestions({ includeUnpublished: true })).toHaveLength(
-      FIXTURE_QUESTIONS.length + 1,
+      MAIN_PLAY_COUNT + 1,
     );
 
     await client.close();

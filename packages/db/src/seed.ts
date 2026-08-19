@@ -66,7 +66,46 @@ export function catalogAnswerRows(item: QuestionCatalogItem) {
   return rows;
 }
 
+async function removeObsoleteGenres(db: AppDb): Promise<void> {
+  const keepIds = GENRES.map((genre) => genre.id);
+  const keepSlugs = GENRES.map((genre) => genre.slug);
+  const obsoleteBySlug = await db
+    .select({ id: genres.id })
+    .from(genres)
+    .where(notInArray(genres.slug, keepSlugs));
+  const dropIds = obsoleteBySlug.map((row) => row.id);
+  await db.delete(questionGenres).where(notInArray(questionGenres.genreId, keepIds));
+  if (dropIds.length > 0) {
+    await db.delete(questionGenres).where(inArray(questionGenres.genreId, dropIds));
+  }
+  const obsolete = await db
+    .select({ id: genres.id, parentId: genres.parentId })
+    .from(genres)
+    .where(notInArray(genres.id, keepIds));
+  const leftover = [...obsolete];
+  while (leftover.length > 0) {
+    const leaves = leftover.filter(
+      (row) => !leftover.some((other) => other.parentId === row.id),
+    );
+    const batch = leaves.length > 0 ? leaves : leftover;
+    await db.delete(genres).where(
+      inArray(
+        genres.id,
+        batch.map((row) => row.id),
+      ),
+    );
+    const removed = new Set(batch.map((row) => row.id));
+    leftover.splice(
+      0,
+      leftover.length,
+      ...leftover.filter((row) => !removed.has(row.id)),
+    );
+  }
+}
+
 export async function seedCatalog(db: AppDb): Promise<void> {
+  await removeObsoleteGenres(db);
+
   const remaining = [...GENRES];
   const inserted = new Set<string>();
   while (remaining.length > 0) {
@@ -98,36 +137,6 @@ export async function seedCatalog(db: AppDb): Promise<void> {
       remaining.length,
       ...remaining.filter((genre) => !readyIds.has(genre.id)),
     );
-  }
-
-  const keepIds = GENRES.map((genre) => genre.id);
-  await db.delete(questionGenres).where(notInArray(questionGenres.genreId, keepIds));
-  const obsolete = await db
-    .select({ id: genres.id, parentId: genres.parentId })
-    .from(genres)
-    .where(notInArray(genres.id, keepIds));
-  const obsoleteIds = new Set(obsolete.map((row) => row.id));
-  const leftover = [...obsolete];
-  while (leftover.length > 0) {
-    const leaves = leftover.filter(
-      (row) => !leftover.some((other) => other.parentId === row.id),
-    );
-    const batch = leaves.length > 0 ? leaves : leftover;
-    await db.delete(genres).where(
-      inArray(
-        genres.id,
-        batch.map((row) => row.id),
-      ),
-    );
-    const removed = new Set(batch.map((row) => row.id));
-    leftover.splice(
-      0,
-      leftover.length,
-      ...leftover.filter((row) => !removed.has(row.id)),
-    );
-    for (const id of removed) {
-      obsoleteIds.delete(id);
-    }
   }
 
   await db

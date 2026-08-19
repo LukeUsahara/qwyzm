@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   createMemoryPlayRepository,
   createMemoryQuestionRepository,
+  filterCatalogByGenres,
   FIXTURE_QUESTIONS,
   GENRE,
   GENRES,
   type StoredGame,
 } from "@qwyzm/play-data";
+import { DEFAULT_GENRE_PLAY_FILTER } from "@qwyzm/shared";
 import { createApp, type AuthGateway, type AuthUser } from "./app.ts";
 
 const PEARL = "c0a80100-0000-4000-8000-000000000002";
@@ -90,7 +92,9 @@ describe("question API", () => {
     const res = await app.request("/api/questions");
     expect(res.status).toBe(200);
     const body = (await res.json()) as { questions: { id: string }[] };
-    expect(body.questions).toHaveLength(FIXTURE_QUESTIONS.length);
+    expect(body.questions).toHaveLength(
+      filterCatalogByGenres(FIXTURE_QUESTIONS, GENRES, DEFAULT_GENRE_PLAY_FILTER).length,
+    );
   });
 
   it("gets a question by id with multiple answers", async () => {
@@ -173,6 +177,16 @@ describe("play API", () => {
     expect(aliceBody.games).toHaveLength(1);
     expect(aliceBody.games[0]?.id).toBe(gameId);
     expect(bobBody.games).toHaveLength(0);
+
+    const fetched = await aliceApp.request(`/api/games/${gameId}`);
+    expect(fetched.status).toBe(200);
+    const fetchedBody = (await fetched.json()) as { game: { id: string } };
+    expect(fetchedBody.game.id).toBe(gameId);
+
+    const missing = await aliceApp.request(
+      "/api/games/c0a80400-0000-4000-8000-00000000ffff",
+    );
+    expect(missing.status).toBe(404);
   });
 });
 

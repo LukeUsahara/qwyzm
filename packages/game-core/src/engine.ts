@@ -57,6 +57,7 @@ function initialState(): GameState {
     lockedPlayerIds: [],
     buzzes: [],
     playRecords: [],
+    rereadCount: 0,
   };
 }
 
@@ -165,6 +166,7 @@ function shouldEndAfterResult(state: GameState, questionIndex: number): boolean 
 function beginPreview(state: GameState, questionIndex: number, now: number): void {
   state.lockedPlayerIds = [];
   state.buzzes = [];
+  state.rereadCount = 0;
   state.phase = {
     type: "preview",
     questionIndex,
@@ -179,6 +181,7 @@ function beginReading(state: GameState, questionIndex: number, now: number): voi
     readingStartedAt: now,
     segmentStartedAt: now,
     committedCount: 0,
+    frozen: false,
   };
 }
 
@@ -186,6 +189,9 @@ function readingVisibleCount(state: GameState, now: number): number {
   const phase = state.phase;
   if (phase.type !== "reading") {
     return 0;
+  }
+  if (phase.frozen) {
+    return phase.committedCount;
   }
   const question = currentQuestion(state, phase.questionIndex);
   const charsPerSecond = CHARS_PER_SECOND[state.settings.revealSpeed];
@@ -256,6 +262,15 @@ function enterShowingResult(
   };
 }
 
+function unlockedOthers(state: GameState, exceptPlayerId: string): boolean {
+  return state.players.some(
+    (player) =>
+      player.id !== exceptPlayerId &&
+      !player.withdrawn &&
+      !state.lockedPlayerIds.includes(player.id),
+  );
+}
+
 function handleIncorrect(
   state: GameState,
   params: {
@@ -271,17 +286,11 @@ function handleIncorrect(
   },
 ): void {
   applyPenalty(state, params.playerId);
+  if (!state.lockedPlayerIds.includes(params.playerId)) {
+    state.lockedPlayerIds = [...state.lockedPlayerIds, params.playerId];
+  }
 
-  const othersCanPlay =
-    state.settings.wrongAnswerRule === "resume_from_position" &&
-    state.players.some(
-      (player) =>
-        player.id !== params.playerId &&
-        !player.withdrawn &&
-        !state.lockedPlayerIds.includes(player.id),
-    );
-
-  if (!othersCanPlay) {
+  const endQuestion = (): void => {
     enterShowingResult(state, {
       questionIndex: params.questionIndex,
       now: params.now,
@@ -294,16 +303,65 @@ function handleIncorrect(
       answerStartedAt: params.answerStartedAt,
       readingStartedAt: params.readingStartedAt,
     });
+  };
+
+  const rule = state.settings.wrongAnswerRule;
+  if (rule === "end_question" || !unlockedOthers(state, params.playerId)) {
+    endQuestion();
     return;
   }
 
-  state.lockedPlayerIds = [...state.lockedPlayerIds, params.playerId];
+  if (rule === "resume_from_position") {
+    state.phase = {
+      type: "reading",
+      questionIndex: params.questionIndex,
+      readingStartedAt: params.readingStartedAt,
+      segmentStartedAt: params.now,
+      committedCount: params.buzzCharIndex,
+      frozen: false,
+    };
+    return;
+  }
+
+  if (rule === "no_one_else") {
+    state.phase = {
+      type: "reading",
+      questionIndex: params.questionIndex,
+      readingStartedAt: params.readingStartedAt,
+      segmentStartedAt: params.now,
+      committedCount: params.buzzCharIndex,
+      frozen: true,
+    };
+    return;
+  }
+
+  if (rule === "reread") {
+    if (state.rereadCount >= state.settings.maxRereads) {
+      endQuestion();
+      return;
+    }
+    state.rereadCount += 1;
+    beginReading(state, params.questionIndex, params.now);
+    return;
+  }
+
+  const next = compareBuzzes(state).find(
+    (buzz) =>
+      buzz.playerId !== params.playerId &&
+      !state.lockedPlayerIds.includes(buzz.playerId),
+  );
+  if (next === undefined) {
+    endQuestion();
+    return;
+  }
   state.phase = {
-    type: "reading",
+    type: "answeringWaitInput",
     questionIndex: params.questionIndex,
     readingStartedAt: params.readingStartedAt,
-    segmentStartedAt: params.now,
-    committedCount: params.buzzCharIndex,
+    playerId: next.playerId,
+    deadlineAt: params.now + ANSWER_START_MS,
+    buzzAt: next.syncedAt,
+    buzzCharIndex: next.charIndex,
   };
 }
 
@@ -344,6 +402,7 @@ export class GameEngine {
       lockedPlayerIds: [],
       buzzes: [],
       playRecords: [],
+      rereadCount: 0,
     };
     beginPreview(this.state, 0, this.clock.syncedNow());
   }
@@ -388,6 +447,9 @@ export class GameEngine {
         }
         return;
       case "reading": {
+        if (phase.frozen) {
+          return;
+        }
         const question = currentQuestion(this.state, phase.questionIndex);
         const length = charsOf(question.body).length;
         const charsPerSecond = CHARS_PER_SECOND[this.state.settings.revealSpeed];
@@ -466,14 +528,36 @@ export class GameEngine {
 
   private onBuzz(playerId: string, now: number): void {
     const phase = this.state.phase;
-    if (phase.type !== "reading" && phase.type !== "waitingBuzz") {
-      return;
-    }
     const player = playerById(this.state, playerId);
     if (player === undefined || player.withdrawn) {
       return;
     }
     if (this.state.lockedPlayerIds.includes(playerId)) {
+      return;
+    }
+    if (this.state.buzzes.some((buzz) => buzz.playerId === playerId)) {
+      if (phase.type === "answeringWaitInput" || phase.type === "answering") {
+        return;
+      }
+    }
+
+    if (
+      (phase.type === "answeringWaitInput" || phase.type === "answering") &&
+      this.state.settings.wrongAnswerRule === "next_fastest"
+    ) {
+      this.state.buzzes = [
+        ...this.state.buzzes,
+        {
+          playerId,
+          syncedAt: now,
+          charIndex: phase.buzzCharIndex,
+          timeFromReadingMs: now - phase.readingStartedAt,
+        },
+      ];
+      return;
+    }
+
+    if (phase.type !== "reading" && phase.type !== "waitingBuzz") {
       return;
     }
 
@@ -645,6 +729,7 @@ export class GameEngine {
       questionCount: questions.length,
       questionId: question?.id ?? null,
       questionNumber: questionIndex === null ? null : questionIndex + 1,
+      genreIds: question ? [...question.genreIds] : [],
       questionTextVisible: false,
       visibleText: "",
       fullText: question?.body ?? null,
@@ -681,7 +766,11 @@ export class GameEngine {
           questionTextVisible: true,
           visibleText: question ? visibleText(question.body, count) : "",
           canBuzz: true,
-          statusLabel: "出題中",
+          statusLabel: phase.frozen
+            ? "早押し待ち"
+            : this.state.rereadCount > 0
+              ? "読み直し"
+              : "出題中",
         };
       }
       case "waitingBuzz":

@@ -61,6 +61,14 @@ describe("official catalog fixtures", () => {
     ).toBeGreaterThan(20);
   });
 
+  it("covers every unique genre with questions", () => {
+    for (const genre of uniqueGenres(GENRES)) {
+      expect(
+        FIXTURE_QUESTIONS.filter((question) => question.genreIds.includes(genre.id)).length,
+      ).toBeGreaterThanOrEqual(3);
+    }
+  });
+
   it("tags questions with leaves or unique genres only", () => {
     const allowed = new Set([
       ...mainGenres(GENRES)

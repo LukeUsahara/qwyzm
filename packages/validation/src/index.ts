@@ -1,14 +1,25 @@
 import { isAllowedInput, normalizeForJudge } from "@qwyzm/game-core";
 import {
+  DEFAULT_GENRE_PLAY_FILTER,
+  DEFAULT_RULE_SET,
+  DEFAULT_USER_SETTINGS,
   DISPLAY_NAME_MAX_LENGTH,
   DISPLAY_NAME_MIN_LENGTH,
   HANDLE_MAX_LENGTH,
   HANDLE_MIN_LENGTH,
   HANDLE_PATTERN,
+  IMPLEMENTED_WRONG_ANSWER_RULES,
   MAX_PLAYERS,
   MAX_QUESTIONS_PER_GAME,
   MIN_CORRECT_POINTS,
+  MIN_MISS_POINTS,
   MIN_QUESTIONS_PER_GAME,
+  MISS_PENALTIES,
+  REVEAL_SPEEDS,
+  USER_SETTINGS_VERSION,
+  WIN_CONDITIONS,
+  isAllowedBuzzCode,
+  type UserSettings,
 } from "@qwyzm/shared";
 import { z } from "zod";
 
@@ -118,3 +129,81 @@ export const catalogQuestionWriteSchema = z
     },
     { message: "同じ入力解が重複しています" },
   );
+
+const genrePlayFilterSchema = z.object({
+  allMain: z.boolean(),
+  selectedGenreIds: z.array(uuidSchema),
+  includeUnique: z.boolean(),
+  selectedUniqueGenreIds: z.array(uuidSchema),
+});
+
+export const ruleSetSchema = z.object({
+  questionCount: questionCountSchema,
+  genreFilter: genrePlayFilterSchema.default({
+    allMain: DEFAULT_GENRE_PLAY_FILTER.allMain,
+    selectedGenreIds: [...DEFAULT_GENRE_PLAY_FILTER.selectedGenreIds],
+    includeUnique: DEFAULT_GENRE_PLAY_FILTER.includeUnique,
+    selectedUniqueGenreIds: [...DEFAULT_GENRE_PLAY_FILTER.selectedUniqueGenreIds],
+  }),
+  questionSetId: uuidSchema.nullable().default(null),
+  correctPoints: correctPointsSchema,
+  missPenalty: z.enum(MISS_PENALTIES),
+  missPoints: z.number().int().min(MIN_MISS_POINTS),
+  winCondition: z.enum(WIN_CONDITIONS),
+  targetPoints: z.number().int().min(1),
+  revealSpeed: z.enum(REVEAL_SPEEDS),
+  wrongAnswerRule: z.enum(IMPLEMENTED_WRONG_ANSWER_RULES),
+  maxRereads: z.number().int().min(0).max(10).default(1),
+});
+
+const volumeSchema = z.object({
+  master: z.number().int().min(0).max(100),
+  bgm: z.number().int().min(0).max(100),
+  se: z.number().int().min(0).max(100),
+});
+
+export const userSettingsSchema = z.object({
+  version: z.literal(USER_SETTINGS_VERSION),
+  ruleSet: ruleSetSchema,
+  keyBind: z.object({
+    buzzCode: z.string().min(1).refine(isAllowedBuzzCode, {
+      message: "このキーは早押しに使えません",
+    }),
+  }),
+  volume: volumeSchema,
+  showQuestionGenre: z.boolean(),
+});
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export function migrateSettings(raw: unknown): UserSettings {
+  if (!isRecord(raw)) {
+    return DEFAULT_USER_SETTINGS;
+  }
+  const ruleRaw = isRecord(raw.ruleSet) ? raw.ruleSet : raw;
+  const parsed = userSettingsSchema.safeParse({
+    version: USER_SETTINGS_VERSION,
+    ruleSet: {
+      ...DEFAULT_RULE_SET,
+      ...ruleRaw,
+      questionSetId: ruleRaw.questionSetId ?? null,
+      genreFilter: isRecord(ruleRaw.genreFilter)
+        ? { ...DEFAULT_GENRE_PLAY_FILTER, ...ruleRaw.genreFilter }
+        : DEFAULT_RULE_SET.genreFilter,
+    },
+    keyBind: isRecord(raw.keyBind)
+      ? { ...DEFAULT_USER_SETTINGS.keyBind, ...raw.keyBind }
+      : DEFAULT_USER_SETTINGS.keyBind,
+    volume: isRecord(raw.volume)
+      ? { ...DEFAULT_USER_SETTINGS.volume, ...raw.volume }
+      : DEFAULT_USER_SETTINGS.volume,
+    showQuestionGenre:
+      typeof raw.showQuestionGenre === "boolean"
+        ? raw.showQuestionGenre
+        : DEFAULT_USER_SETTINGS.showQuestionGenre,
+  });
+  return parsed.success ? parsed.data : DEFAULT_USER_SETTINGS;
+}
+

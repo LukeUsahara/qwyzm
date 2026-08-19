@@ -2,7 +2,7 @@
 
 Webブラウザで動作する早押しクイズゲーム。
 
-現在は Phase 6：ロールと公式問題の編集。手元開発の既定 DB は PGlite です。
+現在は Phase 9：誤答ルールと直近回避出題まで実装済み。次は Phase 10：問題セット。手元開発の既定 DB は PGlite です。
 
 ## 開発（Docker 不要）
 
@@ -65,4 +65,8 @@ pnpm build
 | [docs/phase-4.md](docs/phase-4.md) | Phase 4 問題データの DB / API |
 | [docs/phase-5.md](docs/phase-5.md) | Phase 5 認証と成績のユーザー紐付け |
 | [docs/phase-6.md](docs/phase-6.md) | Phase 6 ロールと公式問題編集 |
+| [docs/phase-6.5.md](docs/phase-6.5.md) | Phase 6.5 公式問題の拡充 |
+| [docs/phase-7.md](docs/phase-7.md) | Phase 7 履歴とプロフィール実データ |
+| [docs/phase-10.md](docs/phase-10.md) | Phase 10 問題セット |
+| [docs/roadmap.md](docs/roadmap.md) | v1 完成までのフェーズ内訳 |
 | [docs/spec-issues.md](docs/spec-issues.md) | 確定した仕様 |

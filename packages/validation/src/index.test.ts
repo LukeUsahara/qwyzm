@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { answerInputSchema, catalogQuestionWriteSchema, handleSchema } from "./index.ts";
+import {
+  answerInputSchema,
+  catalogQuestionWriteSchema,
+  handleSchema,
+  migrateSettings,
+  ruleSetSchema,
+} from "./index.ts";
+import { DEFAULT_RULE_SET, DEFAULT_USER_SETTINGS } from "@qwyzm/shared";
 
 describe("answerInputSchema", () => {
   it("accepts hiragana and rejects katakana", () => {
@@ -55,5 +62,53 @@ describe("catalogQuestionWriteSchema", () => {
         },
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("ruleSetSchema", () => {
+  it("accepts the default rule set and rejects unimplemented wrong-answer rules", () => {
+    expect(ruleSetSchema.safeParse(DEFAULT_RULE_SET).success).toBe(true);
+    expect(
+      ruleSetSchema.safeParse({
+        ...DEFAULT_RULE_SET,
+        wrongAnswerRule: "next_fastest",
+      }).success,
+    ).toBe(true);
+    expect(
+      ruleSetSchema.safeParse({
+        ...DEFAULT_RULE_SET,
+        wrongAnswerRule: "not_a_rule",
+      }).success,
+    ).toBe(false);
+    expect(
+      ruleSetSchema.safeParse({
+        ...DEFAULT_RULE_SET,
+        questionCount: 0,
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("migrateSettings", () => {
+  it("returns defaults for missing or broken JSON", () => {
+    expect(migrateSettings(null)).toEqual(DEFAULT_USER_SETTINGS);
+    expect(migrateSettings("nope")).toEqual(DEFAULT_USER_SETTINGS);
+    expect(migrateSettings({ version: 99, volume: { master: -1 } })).toEqual(
+      DEFAULT_USER_SETTINGS,
+    );
+  });
+
+  it("fills gaps from a partial stored document", () => {
+    const migrated = migrateSettings({
+      ruleSet: { questionCount: 20, revealSpeed: "fast" },
+      keyBind: { buzzCode: "KeyJ" },
+    });
+    expect(migrated.ruleSet.questionCount).toBe(20);
+    expect(migrated.ruleSet.revealSpeed).toBe("fast");
+    expect(migrated.ruleSet.wrongAnswerRule).toBe("end_question");
+    expect(migrated.ruleSet.questionSetId).toBeNull();
+    expect(migrated.keyBind.buzzCode).toBe("KeyJ");
+    expect(migrated.volume).toEqual(DEFAULT_USER_SETTINGS.volume);
+    expect(migrated.showQuestionGenre).toBe(false);
   });
 });

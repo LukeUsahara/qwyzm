@@ -1,7 +1,8 @@
-import { CHARS_PER_SECOND, MAX_QUESTIONS_PER_GAME, PREVIEW_MS } from "@qwyzm/shared";
+import { CHARS_PER_SECOND, DEFAULT_RULE_SET, MAX_QUESTIONS_PER_GAME, PREVIEW_MS } from "@qwyzm/shared";
 import { describe, expect, it } from "vitest";
 import { FakeClock } from "./clock.ts";
 import { GameEngine } from "./engine.ts";
+import { ruleSetToEngineSettings } from "./rule-set.ts";
 import { pickQuestions } from "./selector.ts";
 import type { GameSettings, PlayerConfig, Question } from "./types.ts";
 import { SOLO_DEFAULT_SETTINGS } from "./types.ts";
@@ -68,6 +69,7 @@ describe("preview", () => {
     const view = engine.getView();
     expect(view.phase).toBe("preview");
     expect(view.questionTextVisible).toBe(false);
+    expect(view.genreIds).toEqual([]);
     expect(view.visibleText).toBe("");
     expect(view.canBuzz).toBe(false);
     engine.dispatch(PLAYER.id, { type: "BUZZ" });
@@ -279,7 +281,7 @@ describe("progress", () => {
     engine.dispatch(PLAYER.id, { type: "ANSWER_SUBMIT" });
     const view = engine.getView();
     expect(view.outcome).toBe("incorrect");
-    expect(view.lockedPlayerIds).toEqual([]);
+    expect(view.lockedPlayerIds).toEqual([PLAYER.id]);
     expect(view.visibleText).toBe(Q1.body);
     expect(view.answerReveal).toBe("富士山");
   });
@@ -340,11 +342,156 @@ describe("score and victory", () => {
   });
 });
 
+describe("ruleSetToEngineSettings", () => {
+  it("copies implemented rule fields onto GameSettings", () => {
+    const settings = ruleSetToEngineSettings({
+      ...DEFAULT_RULE_SET,
+      questionCount: 12,
+      correctPoints: 2,
+      missPenalty: "minus_points",
+      missPoints: 3,
+      winCondition: "first_to_points",
+      targetPoints: 7,
+      revealSpeed: "fast",
+      wrongAnswerRule: "resume_from_position",
+      maxRereads: 2,
+    });
+    expect(settings).toEqual({
+      questionCount: 12,
+      correctPoints: 2,
+      missPenalty: "minus_points",
+      missPoints: 3,
+      winCondition: "first_to_points",
+      targetPoints: 7,
+      revealSpeed: "fast",
+      wrongAnswerRule: "resume_from_position",
+      maxRereads: 2,
+    });
+  });
+});
+
 describe("pickQuestions", () => {
   it("never returns more than MAX_QUESTIONS_PER_GAME", () => {
     const pool = Array.from({ length: 120 }, (_, i) =>
       question({ id: `q-${i}`, body: "あ" }),
     );
     expect(pickQuestions(pool, 999, () => 0.5)).toHaveLength(MAX_QUESTIONS_PER_GAME);
+  });
+
+  it("avoids recent ids until the pool would be too small", () => {
+    const pool = Array.from({ length: 4 }, (_, i) =>
+      question({ id: `q-${i}`, body: "あ" }),
+    );
+    const picked = pickQuestions(pool, 2, () => 0, ["q-0", "q-1"]);
+    expect(picked.map((item) => item.id).sort()).toEqual(["q-2", "q-3"]);
+    const all = pickQuestions(pool, 4, () => 0, ["q-0", "q-1"]);
+    expect(all).toHaveLength(4);
+  });
+});
+
+const P2: PlayerConfig = { id: "p2", displayName: "相手", seatIndex: 1 };
+
+function startVersus(
+  clock: FakeClock,
+  settings: Partial<GameSettings>,
+): GameEngine {
+  const engine = new GameEngine(clock);
+  engine.start({
+    settings: {
+      ...SOLO_DEFAULT_SETTINGS,
+      questionCount: 1,
+      ...settings,
+    },
+    players: [PLAYER, P2],
+    questions: [Q1],
+  });
+  return engine;
+}
+
+function missAfterBuzz(engine: GameEngine, clock: FakeClock, playerId: string): void {
+  enterReading(engine, clock);
+  clock.advance(200);
+  engine.dispatch(playerId, { type: "BUZZ" });
+  engine.dispatch(playerId, { type: "ANSWER_START" });
+  engine.dispatch(playerId, { type: "ANSWER_INPUT", value: "ちがう" });
+  engine.dispatch(playerId, { type: "ANSWER_SUBMIT" });
+}
+
+describe("wrong answer rules", () => {
+  it("ends the question for a solo player under every rule", () => {
+    for (const rule of [
+      "end_question",
+      "resume_from_position",
+      "no_one_else",
+      "reread",
+      "next_fastest",
+    ] as const) {
+      const clock = new FakeClock();
+      const engine = startSolo(clock, [Q1], { wrongAnswerRule: rule, maxRereads: 2 });
+      missAfterBuzz(engine, clock, PLAYER.id);
+      expect(engine.getView().phase, rule).toBe("showingResult");
+      expect(engine.getView().outcome, rule).toBe("incorrect");
+    }
+  });
+
+  it("resume_from_position restarts reading from the buzz index for the other player", () => {
+    const clock = new FakeClock();
+    const engine = startVersus(clock, { wrongAnswerRule: "resume_from_position" });
+    missAfterBuzz(engine, clock, PLAYER.id);
+    const view = engine.getView();
+    expect(view.phase).toBe("reading");
+    expect(view.lockedPlayerIds).toEqual([PLAYER.id]);
+    expect(view.visibleText.length).toBeGreaterThan(0);
+    expect(view.canBuzz).toBe(true);
+    engine.dispatch(PLAYER.id, { type: "BUZZ" });
+    expect(engine.getView().phase).toBe("reading");
+  });
+
+  it("no_one_else freezes the text so it does not keep revealing", () => {
+    const clock = new FakeClock();
+    const engine = startVersus(clock, { wrongAnswerRule: "no_one_else" });
+    missAfterBuzz(engine, clock, PLAYER.id);
+    const frozen = engine.getView().visibleText;
+    expect(engine.getView().phase).toBe("reading");
+    clock.advance(2000);
+    expect(engine.getView().phase).toBe("reading");
+    expect(engine.getView().visibleText).toBe(frozen);
+  });
+
+  it("reread restarts from the beginning until maxRereads", () => {
+    const clock = new FakeClock();
+    const engine = startVersus(clock, { wrongAnswerRule: "reread", maxRereads: 1 });
+    missAfterBuzz(engine, clock, PLAYER.id);
+    expect(engine.getView().phase).toBe("reading");
+    expect(engine.getView().visibleText).toBe("");
+    clock.advance(200);
+    engine.dispatch(P2.id, { type: "BUZZ" });
+    engine.dispatch(P2.id, { type: "ANSWER_START" });
+    engine.dispatch(P2.id, { type: "ANSWER_INPUT", value: "ちがう" });
+    engine.dispatch(P2.id, { type: "ANSWER_SUBMIT" });
+    expect(engine.getView().phase).toBe("showingResult");
+  });
+
+  it("next_fastest hands the right to the next buzz in queue", () => {
+    const clock = new FakeClock();
+    const engine = startVersus(clock, { wrongAnswerRule: "next_fastest" });
+    enterReading(engine, clock);
+    clock.advance(200);
+    engine.dispatch(PLAYER.id, { type: "BUZZ" });
+    engine.dispatch(P2.id, { type: "BUZZ" });
+    engine.dispatch(PLAYER.id, { type: "ANSWER_START" });
+    engine.dispatch(PLAYER.id, { type: "ANSWER_INPUT", value: "ちがう" });
+    engine.dispatch(PLAYER.id, { type: "ANSWER_SUBMIT" });
+    const view = engine.getView();
+    expect(view.phase).toBe("answeringWaitInput");
+    expect(view.answeringPlayerId).toBe(P2.id);
+    expect(view.lockedPlayerIds).toEqual([PLAYER.id]);
+  });
+
+  it("next_fastest ends the question when the queue is empty", () => {
+    const clock = new FakeClock();
+    const engine = startVersus(clock, { wrongAnswerRule: "next_fastest" });
+    missAfterBuzz(engine, clock, PLAYER.id);
+    expect(engine.getView().phase).toBe("showingResult");
   });
 });

@@ -39,6 +39,33 @@ export {
   isAdminRole,
 } from "./roles.ts";
 
+export type {
+  ImplementedWrongAnswerRule,
+  KeyBindSettings,
+  MissPenaltySetting,
+  RuleSet,
+  UserSettings,
+  VolumeSettings,
+  WinConditionSetting,
+} from "./settings.ts";
+export {
+  DEFAULT_RULE_SET,
+  DEFAULT_USER_SETTINGS,
+  FORBIDDEN_BUZZ_CODES,
+  IMPLEMENTED_WRONG_ANSWER_RULES,
+  MISS_PENALTIES,
+  MISS_PENALTY_LABEL,
+  REVEAL_SPEEDS,
+  REVEAL_SPEED_LABEL,
+  USER_SETTINGS_STORAGE_KEY,
+  USER_SETTINGS_VERSION,
+  WIN_CONDITIONS,
+  WIN_CONDITION_LABEL,
+  WRONG_ANSWER_RULE_LABEL,
+  isAllowedBuzzCode,
+  labelForKeyCode,
+} from "./settings.ts";
+
 export type { RevealSpeed } from "./constants.ts";
 export {
   ANSWER_START_MS,

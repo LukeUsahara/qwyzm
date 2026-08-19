@@ -4,12 +4,10 @@ import type { Genre } from "@qwyzm/shared";
 import {
   analyzeSession,
   createStoredGame,
-  type PlayRepository,
   type SessionAnalysis,
   type StoredGame,
 } from "@qwyzm/play-data";
-import { createBrowserPlayRepository } from "./browser-repository.ts";
-import { createHttpPlayRepository } from "./http-play-repository.ts";
+import { createClientPlayRepository } from "./client-play-repository.ts";
 
 export function useSoloResult(input: {
   gameId: string | null;
@@ -18,26 +16,31 @@ export function useSoloResult(input: {
   genres: Genre[];
   userId: string | null;
   view: GameView | null;
-}): SessionAnalysis | null {
-  const repo = useMemo<PlayRepository>(
-    () =>
-      input.userId === null
-        ? createBrowserPlayRepository()
-        : createHttpPlayRepository({ baseUrl: "/api" }),
+  onSaved?: () => void;
+}): {
+  analysis: SessionAnalysis | null;
+  saveError: string | null;
+} {
+  const repo = useMemo(
+    () => createClientPlayRepository(input.userId),
     [input.userId],
   );
   const [analysis, setAnalysis] = useState<SessionAnalysis | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const phase = input.view?.phase ?? null;
   const selectedKey = input.selectedGenreIds.join(",");
   const viewRef = useRef(input.view);
   const genresRef = useRef(input.genres);
   const selectedRef = useRef(input.selectedGenreIds);
+  const onSavedRef = useRef(input.onSaved);
   viewRef.current = input.view;
   genresRef.current = input.genres;
   selectedRef.current = input.selectedGenreIds;
+  onSavedRef.current = input.onSaved;
 
   useEffect(() => {
     setAnalysis(null);
+    setSaveError(null);
   }, [input.gameId]);
 
   useEffect(() => {
@@ -66,6 +69,7 @@ export function useSoloResult(input: {
         genres,
       }),
     );
+    setSaveError(null);
 
     let cancelled = false;
     void (async () => {
@@ -82,8 +86,18 @@ export function useSoloResult(input: {
       });
       try {
         await repo.saveGame(stored);
+        if (!cancelled) {
+          setSaveError(null);
+          onSavedRef.current?.();
+        }
       } catch {
-        // Current-session analysis still shows; persistence can retry next time.
+        if (!cancelled) {
+          setSaveError(
+            input.userId === null
+              ? "このブラウザへの保存に失敗しました"
+              : "サーバーへの保存に失敗しました。成績はこの画面では見られますが、履歴には残っていない可能性があります。",
+          );
+        }
       }
       if (!cancelled) {
         setAnalysis(next);
@@ -93,7 +107,7 @@ export function useSoloResult(input: {
     return () => {
       cancelled = true;
     };
-  }, [input.gameId, input.startedAt, phase, repo, selectedKey]);
+  }, [input.gameId, input.startedAt, phase, repo, selectedKey, input.userId]);
 
-  return analysis;
+  return { analysis, saveError };
 }

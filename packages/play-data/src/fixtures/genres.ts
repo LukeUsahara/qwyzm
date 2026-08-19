@@ -75,11 +75,12 @@ export const GENRES: Genre[] = [
   g(165, "anime", "アニメ", 160, 65),
   g(166, "game", "ゲーム", 160, 66),
 
-  g(200, "unique-trivia", "雑学", null, 200, "unique"),
-  g(201, "unique-era", "年号", null, 201, "unique"),
-  g(202, "unique-symbol", "記号・略称", null, 202, "unique"),
-  g(203, "unique-unit", "単位", null, 203, "unique"),
-  g(204, "unique-old-name", "旧国名・別名", null, 204, "unique"),
+  g(200, "unique-nintendo", "任天堂", null, 200, "unique"),
+  g(201, "unique-marvel", "MARVEL", null, 201, "unique"),
+  g(202, "unique-handicraft", "手芸", null, 202, "unique"),
+  g(203, "unique-typescript-react", "TypeScript / React", null, 203, "unique"),
+  g(204, "unique-minecraft", "マインクラフト", null, 204, "unique"),
+  g(205, "unique-yamanote", "山手線", null, 205, "unique"),
 ];
 
 export const GENRE = {
@@ -129,9 +130,10 @@ export const GENRE = {
   manga: gid(164),
   anime: gid(165),
   game: gid(166),
-  uniqueTrivia: gid(200),
-  uniqueEra: gid(201),
-  uniqueSymbol: gid(202),
-  uniqueUnit: gid(203),
-  uniqueOldName: gid(204),
+  uniqueNintendo: gid(200),
+  uniqueMarvel: gid(201),
+  uniqueHandicraft: gid(202),
+  uniqueTypescriptReact: gid(203),
+  uniqueMinecraft: gid(204),
+  uniqueYamanote: gid(205),
 } as const;

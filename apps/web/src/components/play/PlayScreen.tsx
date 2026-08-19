@@ -3,6 +3,8 @@ import type { SessionAnalysis } from "@qwyzm/play-data";
 import type { Genre } from "@qwyzm/shared";
 import { useEffect } from "react";
 import { LOCAL_PLAYER_ID } from "../../game/ids.ts";
+import { useSettings } from "../../stores/settings.ts";
+import { labelForKeyCode } from "@qwyzm/shared";
 import { AnswerBar } from "./AnswerBar.tsx";
 import { AnswerField } from "./AnswerField.tsx";
 import { BuzzButton } from "./BuzzButton.tsx";
@@ -15,11 +17,13 @@ type Props = {
   engine: GameEngine;
   view: GameView;
   analysis: SessionAnalysis | null;
+  saveError: string | null;
   genres: Genre[];
+  showQuestionGenre: boolean;
   onExit: () => void;
 };
 
-export function PlayScreen({ engine, view, analysis, genres, onExit }: Props) {
+export function PlayScreen({ engine, view, analysis, saveError, genres, showQuestionGenre, onExit }: Props) {
   const selfCanBuzz =
     view.canBuzz && !view.lockedPlayerIds.includes(LOCAL_PLAYER_ID);
   const answerGauge = view.gauges.find((gauge) => gauge.kind === "answerSubmit");
@@ -30,9 +34,17 @@ export function PlayScreen({ engine, view, analysis, genres, onExit }: Props) {
       gauge.kind === "noBuzz",
   );
 
+  const buzzCode = useSettings((s) => s.keyBind.buzzCode);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.code !== "Space" && event.key !== " ") {
+      if (event.code !== buzzCode) {
+        return;
+      }
+      if (
+        event.target instanceof HTMLInputElement ||
+        event.target instanceof HTMLTextAreaElement
+      ) {
         return;
       }
       if (!selfCanBuzz) {
@@ -43,13 +55,14 @@ export function PlayScreen({ engine, view, analysis, genres, onExit }: Props) {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [engine, selfCanBuzz]);
+  }, [buzzCode, engine, selfCanBuzz]);
 
   if (view.phase === "gameOver") {
     return (
       <GameOverScreen
         view={view}
         analysis={analysis}
+        saveError={saveError}
         genres={genres}
         onExit={onExit}
       />
@@ -77,7 +90,7 @@ export function PlayScreen({ engine, view, analysis, genres, onExit }: Props) {
               <DiscTimer gauge={discGauge} />
             </div>
           ) : null}
-          <QuestionBoard view={view} />
+          <QuestionBoard view={view} genres={genres} showGenre={showQuestionGenre} />
         </div>
 
         <div className="mt-6 space-y-5">
@@ -101,7 +114,7 @@ export function PlayScreen({ engine, view, analysis, genres, onExit }: Props) {
             }
           />
           <p className="text-center text-[11px] text-muted">
-            早押し: Space またはボタン
+            早押し: {labelForKeyCode(buzzCode)} またはボタン
           </p>
         </div>
       </div>

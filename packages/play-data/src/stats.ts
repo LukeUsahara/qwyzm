@@ -76,6 +76,31 @@ export function summarizeAttempts(
   };
 }
 
+export function summarizeProfile(
+  games: readonly StoredGame[],
+  genres: readonly Genre[],
+): { overall: AttemptStats; byRootGenre: GenreStats[] } {
+  const attempts = games.flatMap((game) => game.attempts);
+  const overall = summarizeAttempts(attempts);
+  const filled = new Map(
+    summarizeByGenre(attempts, [...genres]).map((item) => [item.genreId, item]),
+  );
+  const roots = genres
+    .filter((genre) => genre.parentId === null && (genre.kind ?? "main") === "main")
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+  return {
+    overall,
+    byRootGenre: roots.map(
+      (root) =>
+        filled.get(root.id) ?? {
+          genreId: root.id,
+          name: root.name,
+          stats: summarizeAttempts([]),
+        },
+    ),
+  };
+}
+
 export function summarizeByGenre(
   attempts: readonly StoredAttempt[],
   genres: Genre[],

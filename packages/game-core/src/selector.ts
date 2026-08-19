@@ -1,5 +1,6 @@
 import {
   MAX_QUESTIONS_PER_GAME,
+  RECENT_AVOID_N,
   allowedGenreIdsForPlay,
   questionMatchesGenreFilter,
   type Genre,
@@ -28,26 +29,17 @@ export function filterQuestionsByGenres(
   return pool.filter((question) => questionMatchesGenreFilter(question.genreIds, allowed));
 }
 
-/** Swap later for unseen-first / miss-first / avoid-recent. */
 export type QuestionPickStrategy = {
   pick(
     pool: Question[],
     count: number,
     random?: () => number,
+    avoidIds?: readonly string[],
   ): Question[];
 };
 
-export function pickQuestions(
-  pool: Question[],
-  count: number,
-  random: () => number = Math.random,
-): Question[] {
-  const n = Math.min(
-    Math.max(0, count),
-    MAX_QUESTIONS_PER_GAME,
-    pool.length,
-  );
-  const copy = [...pool];
+function shuffle<T>(items: readonly T[], random: () => number): T[] {
+  const copy = [...items];
   for (let i = copy.length - 1; i > 0; i -= 1) {
     const j = Math.floor(random() * (i + 1));
     const current = copy[i];
@@ -58,7 +50,27 @@ export function pickQuestions(
     copy[i] = swap;
     copy[j] = current;
   }
-  return copy.slice(0, n);
+  return copy;
+}
+
+export function pickQuestions(
+  pool: Question[],
+  count: number,
+  random: () => number = Math.random,
+  avoidIds: readonly string[] = [],
+): Question[] {
+  const n = Math.min(
+    Math.max(0, count),
+    MAX_QUESTIONS_PER_GAME,
+    pool.length,
+  );
+  if (n === 0) {
+    return [];
+  }
+  const avoid = new Set(avoidIds.slice(-RECENT_AVOID_N));
+  const preferred = pool.filter((question) => !avoid.has(question.id));
+  const fallback = pool.filter((question) => avoid.has(question.id));
+  return [...shuffle(preferred, random), ...shuffle(fallback, random)].slice(0, n);
 }
 
 export function randomQuestionPickStrategy(): QuestionPickStrategy {

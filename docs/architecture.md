@@ -55,7 +55,7 @@ tests/
 docs/               # 本ディレクトリ
 ```
 
-`apps/signaling` を `api` に埋め込まない。REST と長寿命 WebSocket はスケール特性が違う。Phase 1 では中身を持たない。
+`apps/signaling` を `api` に埋め込まない。REST と長寿命 WebSocket はスケール特性が違う。Phase 11 で権威ゲームサーバーとして中身を入れる。
 
 ## パッケージ依存
 

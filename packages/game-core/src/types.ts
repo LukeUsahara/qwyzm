@@ -43,6 +43,7 @@ export type GameSettings = {
   targetPoints: number;
   revealSpeed: RevealSpeed;
   wrongAnswerRule: WrongAnswerRule;
+  maxRereads: number;
 };
 
 export type PlayerConfig = {
@@ -78,6 +79,7 @@ export type GamePhase =
       readingStartedAt: number;
       segmentStartedAt: number;
       committedCount: number;
+      frozen: boolean;
     }
   | {
       type: "waitingBuzz";
@@ -144,6 +146,7 @@ export type GameState = {
   lockedPlayerIds: string[];
   buzzes: BuzzRecord[];
   playRecords: QuestionPlayRecord[];
+  rereadCount: number;
 };
 
 export type PlayerIntent =
@@ -188,6 +191,7 @@ export type GameView = {
   questionCount: number;
   questionId: string | null;
   questionNumber: number | null;
+  genreIds: string[];
   questionTextVisible: boolean;
   visibleText: string;
   fullText: string | null;
@@ -218,4 +222,5 @@ export const SOLO_DEFAULT_SETTINGS: GameSettings = {
   targetPoints: 5,
   revealSpeed: "normal",
   wrongAnswerRule: "end_question",
+  maxRereads: 1,
 };

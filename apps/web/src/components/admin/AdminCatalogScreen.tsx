@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { NamedAnswer, QuestionCatalogItem, QuestionStatus } from "@qwyzm/play-data";
 import { collectGenreSubtree, childrenOf, mainGenres, uniqueGenres, type Genre } from "@qwyzm/shared";
 import { createHttpAdminCatalog } from "../../catalog/http-admin-catalog.ts";
@@ -82,6 +82,9 @@ function toItem(form: FormState): QuestionCatalogItem {
   };
 }
 
+const MIN_LIST_PANE = 240;
+const MIN_EDITOR_PANE = 360;
+
 type Props = {
   genres: Genre[];
   onClose: () => void;
@@ -97,6 +100,10 @@ export function AdminCatalogScreen({ genres, onClose, onChanged }: Props) {
   const [query, setQuery] = useState("");
   const [genreFilter, setGenreFilter] = useState("");
   const [sort, setSort] = useState<ListSort>("id");
+  const [listWidth, setListWidth] = useState<number | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const splitRef = useRef<HTMLDivElement>(null);
+  const draggingRef = useRef(false);
 
   const load = async () => {
     const list = await catalog.listQuestions();
@@ -129,9 +136,40 @@ export function AdminCatalogScreen({ genres, onClose, onChanged }: Props) {
     [questions, genres, query, genreFilter, sort],
   );
 
+  const paneBounds = () => {
+    const root = splitRef.current;
+    if (!root) {
+      return { max: MIN_LIST_PANE, half: MIN_LIST_PANE };
+    }
+    const width = root.getBoundingClientRect().width;
+    return {
+      max: Math.max(MIN_LIST_PANE, width - MIN_EDITOR_PANE),
+      half: Math.round(width / 2),
+    };
+  };
+
+  const clampListWidth = (clientX: number) => {
+    const root = splitRef.current;
+    if (!root) {
+      return;
+    }
+    const { max } = paneBounds();
+    setListWidth(
+      Math.min(max, Math.max(MIN_LIST_PANE, clientX - root.getBoundingClientRect().left)),
+    );
+  };
+
   return (
-    <div className="flex h-full min-h-0 gap-5">
-      <section className="flex min-w-0 flex-1 flex-col gap-4">
+    <div
+      ref={splitRef}
+      className={`flex h-full min-h-0 ${dragging ? "select-none" : ""}`}
+    >
+      <section
+        className={`flex min-h-0 min-w-0 flex-col gap-4 ${
+          listWidth === null ? "flex-1" : "shrink-0"
+        }`}
+        style={listWidth === null ? undefined : { width: listWidth }}
+      >
         <header className="flex shrink-0 items-center justify-between">
           <div>
             <p className="text-[11px] tracking-[0.4em] text-gold">OFFICIAL</p>
@@ -214,8 +252,48 @@ export function AdminCatalogScreen({ genres, onClose, onChanged }: Props) {
         </ul>
       </section>
 
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="一覧と編集の幅を調節"
+        tabIndex={0}
+        className="group relative mx-1 w-2 shrink-0 cursor-col-resize"
+        onPointerDown={(event) => {
+          draggingRef.current = true;
+          setDragging(true);
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }}
+        onPointerMove={(event) => {
+          if (!draggingRef.current) {
+            return;
+          }
+          clampListWidth(event.clientX);
+        }}
+        onPointerUp={() => {
+          draggingRef.current = false;
+          setDragging(false);
+        }}
+        onPointerCancel={() => {
+          draggingRef.current = false;
+          setDragging(false);
+        }}
+        onKeyDown={(event) => {
+          const { max, half } = paneBounds();
+          if (event.key === "ArrowLeft") {
+            event.preventDefault();
+            setListWidth((width) => Math.max(MIN_LIST_PANE, (width ?? half) - 24));
+          }
+          if (event.key === "ArrowRight") {
+            event.preventDefault();
+            setListWidth((width) => Math.min(max, (width ?? half) + 24));
+          }
+        }}
+      >
+        <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-line group-hover:bg-gold group-focus-visible:bg-gold" />
+      </div>
+
       <form
-        className="w-[26rem] shrink-0 space-y-5 overflow-y-auto lg:w-[28rem]"
+        className="min-w-0 flex-1 space-y-5 overflow-y-auto pl-3"
         onSubmit={(event) => {
           event.preventDefault();
           void save();

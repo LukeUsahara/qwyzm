@@ -27,6 +27,7 @@ export {
 } from "./time-sync.ts";
 export type { OffsetEstimate, SyncProbe } from "./time-sync.ts";
 
+export { ruleSetToEngineSettings } from "./rule-set.ts";
 export { SOLO_DEFAULT_SETTINGS } from "./types.ts";
 export type {
   AnswerReveal,

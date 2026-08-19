@@ -1,34 +1,38 @@
 import {
   GameEngine,
-  SOLO_DEFAULT_SETTINGS,
   createLocalSyncedClock,
   filterQuestionsByGenres,
   randomQuestionPickStrategy,
+  ruleSetToEngineSettings,
 } from "@qwyzm/game-core";
 import { toPlayQuestion, type QuestionCatalogItem } from "@qwyzm/play-data";
-import type { Genre, GenrePlayFilter } from "@qwyzm/shared";
+import type { Genre, RuleSet } from "@qwyzm/shared";
 import { LOCAL_PLAYER_ID } from "./ids.ts";
 
 export function createSoloEngine(params: {
   displayName: string;
-  questionCount: number;
+  ruleSet: RuleSet;
   pool: QuestionCatalogItem[];
   genres: Genre[];
-  genreFilter: GenrePlayFilter;
+  recentQuestionIds?: readonly string[];
 }): GameEngine {
   const clock = createLocalSyncedClock();
   const engine = new GameEngine(clock);
   const filtered = filterQuestionsByGenres(
     params.pool.map(toPlayQuestion),
     params.genres,
-    params.genreFilter,
+    params.ruleSet.genreFilter,
   );
-  const questions = randomQuestionPickStrategy().pick(filtered, params.questionCount);
+  const questions = randomQuestionPickStrategy().pick(
+    filtered,
+    params.ruleSet.questionCount,
+    Math.random,
+    params.recentQuestionIds ?? [],
+  );
   engine.start({
     settings: {
-      ...SOLO_DEFAULT_SETTINGS,
+      ...ruleSetToEngineSettings(params.ruleSet),
       questionCount: questions.length,
-      wrongAnswerRule: "end_question",
     },
     players: [
       {

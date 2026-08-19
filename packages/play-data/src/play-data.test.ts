@@ -17,6 +17,7 @@ import {
   compareQuestionBuzz,
   summarizeAttempts,
   summarizeByGenre,
+  summarizeProfile,
 } from "./stats.ts";
 import { toPlayQuestion, type StoredAttempt, type StoredGame } from "./types.ts";
 
@@ -334,5 +335,24 @@ describe("analyzeSession", () => {
     });
     expect(analysis.byQuestion[0]?.delta).toBeCloseTo(2.4);
     expect(analysis.current).not.toHaveProperty("averageBuzzCharIndex");
+  });
+});
+
+describe("summarizeProfile", () => {
+  it("fills every main root genre even without attempts there", () => {
+    const profile = summarizeProfile(
+      [
+        game("g", "2026-01-01T00:00:00.000Z", [
+          attempt({ id: "a1", genreIds: [JAPAN], result: "correct" }),
+          attempt({ id: "a2", genreIds: [JAPAN], result: "incorrect" }),
+        ]),
+      ],
+      genres,
+    );
+    expect(profile.overall.accuracy).toBe(0.5);
+    expect(profile.byRootGenre.map((item) => item.name)).toEqual(["歴史", "科学"]);
+    expect(profile.byRootGenre[0]?.stats.total).toBe(2);
+    expect(profile.byRootGenre[1]?.stats.total).toBe(0);
+    expect(profile.byRootGenre[1]?.stats.accuracy).toBeNull();
   });
 });

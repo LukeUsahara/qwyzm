@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_GENRE_PLAY_FILTER } from "@qwyzm/shared";
 import { GENRE, GENRES } from "./fixtures/genres.ts";
 import { FIXTURE_QUESTIONS } from "./fixtures/questions.ts";
 import { createMemoryQuestionRepository, filterCatalogByGenres } from "./question-repository.ts";
@@ -6,6 +7,11 @@ import { createMemoryQuestionRepository, filterCatalogByGenres } from "./questio
 const PEARL = "c0a80100-0000-4000-8000-000000000002";
 const FUJI = "c0a80100-0000-4000-8000-000000000001";
 const GENJI = "c0a80100-0000-4000-8000-000000000006";
+const MAIN_PLAY_COUNT = filterCatalogByGenres(
+  FIXTURE_QUESTIONS,
+  GENRES,
+  DEFAULT_GENRE_PLAY_FILTER,
+).length;
 
 describe("memory QuestionRepository", () => {
   const repo = createMemoryQuestionRepository({
@@ -15,6 +21,11 @@ describe("memory QuestionRepository", () => {
 
   it("lists all questions when no genre is selected", async () => {
     const questions = await repo.listQuestions();
+    expect(questions).toHaveLength(MAIN_PLAY_COUNT);
+  });
+
+  it("includes unique-only questions when unique genres are enabled", async () => {
+    const questions = await repo.listQuestions({ includeUnique: true });
     expect(questions).toHaveLength(FIXTURE_QUESTIONS.length);
   });
 
@@ -83,9 +94,9 @@ describe("memory QuestionRepository", () => {
         },
       ],
     });
-    expect(await repo.listQuestions()).toHaveLength(FIXTURE_QUESTIONS.length);
+    expect(await repo.listQuestions()).toHaveLength(MAIN_PLAY_COUNT);
     expect(await repo.listQuestions({ includeUnpublished: true })).toHaveLength(
-      FIXTURE_QUESTIONS.length + 1,
+      MAIN_PLAY_COUNT + 1,
     );
 
     const saved = await repo.saveQuestion({

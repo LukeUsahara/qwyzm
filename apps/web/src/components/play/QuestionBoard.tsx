@@ -1,9 +1,25 @@
 import type { GameView } from "@qwyzm/game-core";
+import type { Genre } from "@qwyzm/shared";
+import { formatGenreLabels } from "./SessionAnalysisView.tsx";
 
-export function QuestionBoard({ view }: { view: GameView }) {
+export function QuestionBoard({
+  view,
+  genres,
+  showGenre,
+}: {
+  view: GameView;
+  genres: Genre[];
+  showGenre: boolean;
+}) {
   if (view.phase === "preview") {
+    const genreLabel = formatGenreLabels(view.genreIds, genres);
     return (
-      <p className="font-serif text-5xl text-gold">第{view.questionNumber}問</p>
+      <div className="space-y-3">
+        <p className="font-serif text-5xl text-gold">第{view.questionNumber}問</p>
+        {showGenre && genreLabel.length > 0 ? (
+          <p className="text-sm tracking-widest text-muted">ジャンル：{genreLabel}</p>
+        ) : null}
+      </div>
     );
   }
 

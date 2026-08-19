@@ -155,6 +155,23 @@ export function createApp(
     return c.json({ games });
   });
 
+  app.get("/api/games/:id", async (c) => {
+    const session = await extras.auth?.getSession(c.req.raw.headers);
+    if (!session || extras.plays === undefined) {
+      return c.json({ error: "unauthorized" }, 401);
+    }
+    const parsed = uuidSchema.safeParse(c.req.param("id"));
+    if (!parsed.success) {
+      return c.json({ error: "invalid id" }, 400);
+    }
+    const games = await extras.plays(session.user.id).listGames();
+    const game = games.find((item) => item.id === parsed.data);
+    if (game === undefined) {
+      return c.json({ error: "not found" }, 404);
+    }
+    return c.json({ game });
+  });
+
   app.post("/api/games", async (c) => {
     const session = await extras.auth?.getSession(c.req.raw.headers);
     if (!session || extras.plays === undefined) {
@@ -183,7 +200,11 @@ export function createApp(
     if (!access.ok) {
       return access.response;
     }
-    const list = await questions.listQuestions({ includeUnpublished: true });
+    const list = await questions.listQuestions({
+      includeUnpublished: true,
+      includeUnique: true,
+      allMain: true,
+    });
     return c.json({ questions: list });
   });
 

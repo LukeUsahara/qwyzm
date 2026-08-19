@@ -51,16 +51,13 @@ const SOCCER = [GENRE.soccer];
 const BASEBALL = [GENRE.baseball];
 const RECORD = [GENRE.records];
 const POLI = [GENRE.politics];
-const SYM = [GENRE.uniqueSymbol];
-const OLD = [GENRE.uniqueOldName];
-const ERA = [GENRE.uniqueEra];
 
 export const FIXTURE_QUESTIONS: QuestionCatalogItem[] = [
   q(
     1,
     "古来『不二』や『芙蓉峰』とも呼ばれる、標高3776メートルの日本最高峰は何でしょう？",
     namedAnswer("富士山", "ふじさん"),
-    [...GEO, ...OLD],
+    GEO,
     { closeInputs: ["ふじのやま"] },
   ),
   q(
@@ -73,7 +70,7 @@ export const FIXTURE_QUESTIONS: QuestionCatalogItem[] = [
     3,
     "ミトコンドリア内で多く合成され、アデノシン三リン酸とも呼ばれる、生体内のエネルギー通貨は何でしょう？",
     namedAnswer("ATP", "atp", ["えーてぃーぴー"]),
-    [...BIO, ...SYM],
+    BIO,
   ),
   q(
     4,
@@ -110,7 +107,7 @@ export const FIXTURE_QUESTIONS: QuestionCatalogItem[] = [
     9,
     "ネパール名をサガルマータ、チベット名をチョモランマという、世界最高峰は何でしょう？",
     namedAnswer("エベレスト", "えべれすと"),
-    [...GEO, ...OLD],
+    GEO,
     { alternates: [namedAnswer("チョモランマ", "ちょもらんま")] },
   ),
   q(
@@ -155,7 +152,7 @@ export const FIXTURE_QUESTIONS: QuestionCatalogItem[] = [
     16,
     "1600年、石田三成ら西軍と徳川家康ら東軍が激突した、天下分け目の戦いの舞台はどこでしょう？",
     namedAnswer("関ヶ原", "せきがはら"),
-    [...JP, ...ERA],
+    JP,
   ),
   q(
     17,
@@ -289,19 +286,19 @@ export const FIXTURE_QUESTIONS: QuestionCatalogItem[] = [
     38,
     "ワトソンとクリックが二重らせん構造を提案した、遺伝情報を担う核酸は何でしょう？",
     namedAnswer("DNA", "dna", ["でぃーえぬえー", "でおきしりぼかくさん"]),
-    [...BIO, ...SYM],
+    BIO,
   ),
   q(
     39,
     "ラヴォアジエが命名し、原子番号8、元素記号Oで表される気体の元素は何でしょう？",
     namedAnswer("酸素", "さんそ"),
-    [...CHEM, ...SYM],
+    CHEM,
   ),
   q(
     40,
     "ラテン語でアウルムと呼ばれ、元素記号Auで表される金属は何でしょう？",
     namedAnswer("金", "きん"),
-    [...CHEM, ...SYM],
+    CHEM,
   ),
   q(
     41,
@@ -355,7 +352,7 @@ export const FIXTURE_QUESTIONS: QuestionCatalogItem[] = [
     49,
     "太陽のスペクトル観測で発見され、元素記号He、原子番号2の気体は何でしょう？",
     namedAnswer("ヘリウム", "へりうむ"),
-    [...CHEM, ...SYM],
+    CHEM,
   ),
   q(
     50,
@@ -722,7 +719,7 @@ export const FIXTURE_QUESTIONS: QuestionCatalogItem[] = [
     110,
     "ジュネーブに本部を置き、感染症対策などを行う、国際連合の専門機関で保健を担う組織は何でしょう？",
     namedAnswer("WHO", "who", ["せかいほけんきかん"]),
-    [GENRE.health, ...SYM],
+    [GENRE.health],
   ),
   q(
     111,
@@ -746,18 +743,126 @@ export const FIXTURE_QUESTIONS: QuestionCatalogItem[] = [
     114,
     "国際単位系で長さの基本単位とされ、記号mで表されるものは何でしょう？",
     namedAnswer("メートル", "めーとる"),
-    [...MATH, GENRE.uniqueUnit],
+    MATH,
   ),
   q(
     115,
     "1868年、江戸幕府に代わり明治天皇のもとで始まった時代の名前は何でしょう？",
     namedAnswer("明治", "めいじ"),
-    [...JP, ...ERA],
+    JP,
   ),
   q(
     116,
     "明治時代に東京と改称されるまで、徳川幕府の所在地として使われた地名は何でしょう？",
     namedAnswer("江戸", "えど"),
-    [...JP, ...OLD],
+    JP,
+  ),
+  q(
+    117,
+    "花札やトランプの製造から始まり、1983年にファミリーコンピュータを発売した京都の企業は何でしょう？",
+    namedAnswer("任天堂", "にんてんどう"),
+    [GENRE.uniqueNintendo],
+  ),
+  q(
+    118,
+    "ハイラルを舞台にしたシリーズで、トライフォースを掲げてガノンと戦う緑の帽子の勇者は誰でしょう？",
+    namedAnswer("リンク", "りんく"),
+    [GENRE.uniqueNintendo],
+  ),
+  q(
+    119,
+    "リモコン型のコントローラが特徴で、2006年に任天堂が発売した据え置き型ゲーム機は何でしょう？",
+    namedAnswer("Wii", "wii", ["うぃー"]),
+    [GENRE.uniqueNintendo],
+  ),
+  q(
+    120,
+    "放射性のクモに咬まれた高校生が壁を這い、ニューヨークを守るMARVELのヒーローは誰でしょう？",
+    namedAnswer("スパイダーマン", "すぱいだーまん"),
+    [GENRE.uniqueMarvel],
+  ),
+  q(
+    121,
+    "アーク・リアクターを胸に埋め、赤と金のスーツで戦うMARVELの天才発明家は誰でしょう？",
+    namedAnswer("アイアンマン", "あいあんまん", ["とーにーすたーく"]),
+    [GENRE.uniqueMarvel],
+  ),
+  q(
+    122,
+    "北欧神話の雷神をモチーフにし、ハンマーを振るって戦う、アベンジャーズの一員は誰でしょう？",
+    namedAnswer("ソー", "そー", ["とーる"]),
+    [GENRE.uniqueMarvel],
+  ),
+  q(
+    123,
+    "2本の棒針と毛糸を使い、ループを重ねて布地をつくる手芸の技法は何でしょう？",
+    namedAnswer("編み物", "あみもの", ["にっと"]),
+    [GENRE.uniqueHandicraft],
+  ),
+  q(
+    124,
+    "布を縫い合わせて中に綿などを詰める、人形として親しまれる手芸作品は何でしょう？",
+    namedAnswer("ぬいぐるみ", "ぬいぐるみ"),
+    [GENRE.uniqueHandicraft],
+  ),
+  q(
+    125,
+    "布目を数えて×印を繰り返す、刺しゅうの一種で図案を写していく技法は何でしょう？",
+    namedAnswer("クロスステッチ", "くろすすてっち"),
+    [GENRE.uniqueHandicraft],
+  ),
+  q(
+    126,
+    "JavaScriptに静的な型を足し、マイクロソフトが開発したプログラミング言語は何でしょう？",
+    namedAnswer("TypeScript", "typescript", ["たいぷすくりぷと"]),
+    [GENRE.uniqueTypescriptReact],
+  ),
+  q(
+    127,
+    "コンポーネントで画面を組み立てる、メタが公開したJavaScriptのUIライブラリは何でしょう？",
+    namedAnswer("React", "react", ["りあくと"]),
+    [GENRE.uniqueTypescriptReact],
+  ),
+  q(
+    128,
+    "Reactの関数コンポーネントで状態を持たせるために使う、代表的なフックは何でしょう？",
+    namedAnswer("useState", "usestate", ["ゆーすすてーと"]),
+    [GENRE.uniqueTypescriptReact],
+  ),
+  q(
+    129,
+    "スウェーデンのモヤンが開発し、ブロックを置いて世界を作るサンドボックスゲームは何でしょう？",
+    namedAnswer("マインクラフト", "まいんくらふと", ["minecraft"]),
+    [GENRE.uniqueMinecraft],
+  ),
+  q(
+    130,
+    "マインクラフトで、近づくと音を立てて爆発する、緑の四角い敵対モブは何でしょう？",
+    namedAnswer("クリーパー", "くりーぱー"),
+    [GENRE.uniqueMinecraft],
+  ),
+  q(
+    131,
+    "マインクラフトでネザーへ行く門を作るときに使う、黒くて硬いブロックは何でしょう？",
+    namedAnswer("黒曜石", "こくようせき", ["おぶしでぃあん"]),
+    [GENRE.uniqueMinecraft],
+  ),
+  q(
+    132,
+    "渋谷・新宿・池袋などを経由し、JR東日本が東京都心を環状に走る通勤路線は何でしょう？",
+    namedAnswer("山手線", "やまのてせん"),
+    [GENRE.uniqueYamanote],
+  ),
+  q(
+    133,
+    "山手線の駅で、明治神宮の最寄りとして知られ、竹下通りの入口にも近い駅はどこでしょう？",
+    namedAnswer("原宿", "はらじゅく"),
+    [GENRE.uniqueYamanote],
+  ),
+  q(
+    134,
+    "山手線の駅で、南口にルミネがあり、埼京線や湘南新宿ラインも発着する巨大ターミナルはどこでしょう？",
+    namedAnswer("新宿", "しんじゅく"),
+    [GENRE.uniqueYamanote],
   ),
 ];

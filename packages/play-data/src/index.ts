@@ -45,6 +45,7 @@ export {
   compareQuestionBuzz,
   summarizeAttempts,
   summarizeByGenre,
+  summarizeProfile,
 } from "./stats.ts";
 export type {
   AttemptStats,
