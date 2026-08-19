@@ -17,6 +17,7 @@ import { HistoryScreen } from "./components/history/HistoryScreen.tsx";
 import { HomeScreen } from "./components/home/HomeScreen.tsx";
 import { SettingsScreen } from "./components/settings/SettingsScreen.tsx";
 import { QuestionSetsScreen } from "./components/sets/QuestionSetsScreen.tsx";
+import { RoomScreen } from "./components/rooms/RoomScreen.tsx";
 import { ProfilePanel } from "./components/profile/ProfilePanel.tsx";
 import { AdminCatalogScreen } from "./components/admin/AdminCatalogScreen.tsx";
 import { useQuestionSets } from "./play-data/useQuestionSets.ts";
@@ -27,7 +28,7 @@ type ActivePlay = {
   startedAt: string;
 };
 
-type MainView = "home" | "solo" | "play" | "history" | "settings" | "sets" | "admin";
+type MainView = "home" | "solo" | "play" | "history" | "settings" | "sets" | "room" | "admin";
 
 export function App() {
   const { data: session, isPending } = authClient.useSession();
@@ -238,6 +239,12 @@ export function App() {
     setViewName("sets");
   };
 
+  const openRoom = () => {
+    applyRuleSet(settingsRuleSet);
+    setPlay(null);
+    setViewName("room");
+  };
+
   const chooseQuestionSet = (id: string | null) => {
     setQuestionSetId(id);
     patchSettings({
@@ -299,6 +306,12 @@ export function App() {
             onSave={questionSets.save}
             onRemove={questionSets.remove}
             createDraft={questionSets.createDraft}
+          />
+        ) : viewName === "room" ? (
+          <RoomScreen
+            displayName={displayName}
+            ruleSet={sessionRuleSet}
+            onClose={openHome}
           />
         ) : play && view ? (
           <PlayScreen
@@ -365,6 +378,7 @@ export function App() {
             onHistory={openHistory}
             onSettings={openSettings}
             onSets={openSets}
+            onRoom={openRoom}
           />
         )}
       </main>

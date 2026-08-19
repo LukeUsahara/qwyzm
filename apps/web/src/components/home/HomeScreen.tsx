@@ -3,9 +3,10 @@ type Props = {
   onHistory: () => void;
   onSettings: () => void;
   onSets: () => void;
+  onRoom: () => void;
 };
 
-export function HomeScreen({ onSolo, onHistory, onSettings, onSets }: Props) {
+export function HomeScreen({ onSolo, onHistory, onSettings, onSets, onRoom }: Props) {
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-8">
       <div>
@@ -35,11 +36,11 @@ export function HomeScreen({ onSolo, onHistory, onSettings, onSets }: Props) {
         </button>
         <button
           type="button"
-          disabled
-          className="border border-line px-8 py-4 text-left opacity-50"
+          onClick={onRoom}
+          className="border border-line px-8 py-4 text-left"
         >
-          <p className="text-sm tracking-[0.3em] text-muted">カスタム部屋</p>
-          <p className="mt-1 text-xs text-muted">Phase 11 で実装します</p>
+          <p className="text-sm tracking-[0.3em] text-paper">カスタム部屋</p>
+          <p className="mt-1 text-xs text-muted">部屋コードで招待して同じルールで待つ</p>
         </button>
         <button
           type="button"

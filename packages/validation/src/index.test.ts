@@ -7,6 +7,9 @@ import {
   migrateSettings,
   questionSetHttpWriteSchema,
   questionSetWriteSchema,
+  roomCodeSchema,
+  roomRuleSetSchema,
+  clientRoomMessageSchema,
   ruleSetSchema,
 } from "./index.ts";
 import { DEFAULT_RULE_SET, DEFAULT_USER_SETTINGS } from "@qwyzm/shared";
@@ -141,6 +144,26 @@ describe("questionSetWriteSchema", () => {
         id: "local:c0a80600-0000-4000-8000-000000000001",
         name: "ゲスト",
         source: "filter",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("room protocol", () => {
+  it("accepts a 6-character room code and room messages", () => {
+    expect(roomCodeSchema.safeParse("AAAAAA").success).toBe(true);
+    expect(roomCodeSchema.safeParse("aaa").success).toBe(false);
+    expect(
+      clientRoomMessageSchema.safeParse({
+        type: "create",
+        displayName: "ホスト",
+        ruleSet: DEFAULT_RULE_SET,
+      }).success,
+    ).toBe(true);
+    expect(
+      roomRuleSetSchema.safeParse({
+        ...DEFAULT_RULE_SET,
+        questionSetId: "local:c0a80600-0000-4000-8000-000000000001",
       }).success,
     ).toBe(false);
   });

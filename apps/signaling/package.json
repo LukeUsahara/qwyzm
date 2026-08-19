@@ -7,15 +7,23 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "dev": "tsx watch src/listen.ts",
+    "start": "tsx src/listen.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "tsc --noEmit -p tsconfig.json",
     "build": "tsc --noEmit -p tsconfig.json",
-    "test": "node -e \"process.exit(0)\""
+    "test": "vitest run"
   },
   "dependencies": {
-    "@qwyzm/shared": "workspace:*"
+    "@qwyzm/shared": "workspace:*",
+    "@qwyzm/validation": "workspace:*",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
-    "typescript": "^5.9.2"
+    "@types/node": "^24.3.0",
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.20.3",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
   }
 }

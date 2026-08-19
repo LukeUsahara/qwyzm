@@ -21,6 +21,7 @@ import {
   USER_SETTINGS_VERSION,
   WIN_CONDITIONS,
   isAllowedBuzzCode,
+  isLocalQuestionSetId,
   type UserSettings,
 } from "@qwyzm/shared";
 import { z } from "zod";
@@ -241,5 +242,38 @@ export const questionSetWriteSchema = z.object({
 export const questionSetHttpWriteSchema = questionSetWriteSchema.extend({
   id: uuidSchema.optional(),
 });
+
+export const ROOM_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+export const ROOM_CODE_LENGTH = 6;
+export const roomCodeSchema = z
+  .string()
+  .length(ROOM_CODE_LENGTH)
+  .regex(new RegExp(`^[${ROOM_CODE_ALPHABET}]{${ROOM_CODE_LENGTH}}$`));
+
+export const roomRuleSetSchema = ruleSetSchema.refine(
+  (ruleSet) => ruleSet.questionSetId === null || !isLocalQuestionSetId(ruleSet.questionSetId),
+  { message: "local question sets cannot be used in rooms" },
+);
+
+export const clientRoomMessageSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("create"),
+    displayName: displayNameSchema,
+    ruleSet: ruleSetSchema,
+  }),
+  z.object({
+    type: z.literal("join"),
+    displayName: displayNameSchema,
+    roomCode: roomCodeSchema,
+    reconnectToken: uuidSchema.optional(),
+  }),
+  z.object({ type: z.literal("leave") }),
+  z.object({ type: z.literal("kick"), playerId: uuidSchema }),
+  z.object({ type: z.literal("update_rules"), ruleSet: ruleSetSchema }),
+  z.object({ type: z.literal("start") }),
+  z.object({ type: z.literal("ping"), t0: z.number() }),
+]);
+
+export type ClientRoomMessage = z.infer<typeof clientRoomMessageSchema>;
 
 

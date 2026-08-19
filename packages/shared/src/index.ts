@@ -82,6 +82,8 @@ export {
   newLocalQuestionSetId,
 } from "./question-set.ts";
 
+export type { RoomPlayerPublic, RoomSnapshot, RoomStatus } from "./room.ts";
+
 export type { RevealSpeed } from "./constants.ts";
 export {
   ANSWER_START_MS,

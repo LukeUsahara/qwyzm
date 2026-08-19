@@ -7,7 +7,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "pnpm --parallel --filter @qwyzm/web --filter @qwyzm/api dev",
+    "dev": "pnpm --parallel --filter @qwyzm/web --filter @qwyzm/api --filter @qwyzm/signaling dev",
     "lint": "pnpm -r --if-present lint",
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test",

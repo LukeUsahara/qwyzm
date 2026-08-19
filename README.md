@@ -2,7 +2,7 @@
 
 Webブラウザで動作する早押しクイズゲーム。
 
-現在は Phase 10：問題セットまで実装済み。次は Phase 11：権威 WebSocket のカスタム部屋。手元開発の既定 DB は PGlite です。
+現在は Phase 11：権威 WebSocket のカスタム部屋（ロビー・開始直前）まで実装済み。次は Phase 12：対戦ゲームループ。手元開発の既定 DB は PGlite です。
 
 ## 開発（Docker 不要）
 
@@ -68,5 +68,6 @@ pnpm build
 | [docs/phase-6.5.md](docs/phase-6.5.md) | Phase 6.5 公式問題の拡充 |
 | [docs/phase-7.md](docs/phase-7.md) | Phase 7 履歴とプロフィール実データ |
 | [docs/phase-10.md](docs/phase-10.md) | Phase 10 問題セット |
+| [docs/phase-11.md](docs/phase-11.md) | Phase 11 権威 WS 部屋 |
 | [docs/roadmap.md](docs/roadmap.md) | v1 完成までのフェーズ内訳 |
 | [docs/spec-issues.md](docs/spec-issues.md) | 確定した仕様 |
