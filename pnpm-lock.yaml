@@ -19,6 +19,9 @@ importers:
       '@qwyzm/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@qwyzm/game-core':
+        specifier: workspace:*
+        version: link:../../packages/game-core
       '@qwyzm/play-data':
         specifier: workspace:*
         version: link:../../packages/play-data
@@ -50,6 +53,9 @@ importers:
 
   apps/signaling:
     dependencies:
+      '@qwyzm/game-core':
+        specifier: workspace:*
+        version: link:../../packages/game-core
       '@qwyzm/shared':
         specifier: workspace:*
         version: link:../../packages/shared

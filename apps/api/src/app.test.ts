@@ -352,3 +352,33 @@ describe("question set API", () => {
   });
 });
 
+describe("internal play questions", () => {
+  it("rejects missing tokens and picks a seeded pool with a valid token", async () => {
+    const internal = createApp(questions, { internalToken: "secret-token" });
+    const body = {
+      questionSetId: null,
+      genreFilter: DEFAULT_GENRE_PLAY_FILTER,
+      count: 1,
+      seed: "room-code",
+    };
+    const denied = await internal.request("/internal/play-questions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    expect(denied.status).toBe(401);
+    const allowed = await internal.request("/internal/play-questions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-internal-token": "secret-token",
+      },
+      body: JSON.stringify(body),
+    });
+    expect(allowed.status).toBe(200);
+    const payload = (await allowed.json()) as { questions: { id: string; body: string }[] };
+    expect(payload.questions).toHaveLength(1);
+    expect(payload.questions[0]?.body.length).toBeGreaterThan(0);
+  });
+});
+

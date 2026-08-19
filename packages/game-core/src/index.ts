@@ -29,6 +29,8 @@ export type { OffsetEstimate, SyncProbe } from "./time-sync.ts";
 
 export { ruleSetToEngineSettings } from "./rule-set.ts";
 export { SOLO_DEFAULT_SETTINGS } from "./types.ts";
+export { nextWakeDelayMs, toPublicGameView } from "./public-view.ts";
+export type { PlayerConnection, PublicGameView, PublicPlayerView } from "./public-view.ts";
 export type {
   AnswerReveal,
   AnswerSpec,

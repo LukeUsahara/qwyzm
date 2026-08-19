@@ -23,7 +23,7 @@ describe("RoomManager", () => {
     const back = rooms.join("s3", host.room.code, "Guest2", guest.player.reconnectToken);
     expect(back.player.id).toBe(guest.player.id);
     expect(back.player.seatIndex).toBe(guest.player.seatIndex);
-    expect(back.player.displayName).toBe("Guest2");
+    expect(back.player.displayName).toBe("Guest");
 
     expect(() => rooms.updateRules(guest.player.id, DEFAULT_RULE_SET)).toThrow("forbidden");
     expect(() => rooms.kick(guest.player.id, host.player.id)).toThrow("forbidden");
@@ -41,5 +41,19 @@ describe("RoomManager", () => {
     ).toThrow("invalid_rules");
     const host = rooms.create("s1", "Host", DEFAULT_RULE_SET);
     expect(() => rooms.start(host.player.id)).toThrow("not_enough_players");
+  });
+
+  it("drops disconnected lobby seats on start and rejects mid-match join", () => {
+    const rooms = createRoomManager({ random: () => 0 });
+    const host = rooms.create("s1", "Host", DEFAULT_RULE_SET);
+    const guest = rooms.join("s2", host.room.code, "Guest");
+    rooms.join("s3", host.room.code, "Third");
+    rooms.disconnect("s3");
+    const started = rooms.start(host.player.id);
+    expect(started.players.map((player) => player.displayName)).toEqual(["Host", "Guest"]);
+    rooms.setStatus(host.room.code, "in_game");
+    expect(() => rooms.join("s4", host.room.code, "Late")).toThrow("match_in_progress");
+    const back = rooms.join("s5", host.room.code, "Ignored", guest.player.reconnectToken);
+    expect(back.player.id).toBe(guest.player.id);
   });
 });

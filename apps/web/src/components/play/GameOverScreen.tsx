@@ -4,6 +4,7 @@ import type { Genre } from "@qwyzm/shared";
 import { SessionAnalysisView } from "./SessionAnalysisView.tsx";
 
 type Props = {
+  playerId: string;
   view: GameView;
   analysis: SessionAnalysis | null;
   saveError: string | null;
@@ -11,14 +12,14 @@ type Props = {
   onExit: () => void;
 };
 
-export function GameOverScreen({ view, analysis, saveError, genres, onExit }: Props) {
-  const self = view.players[0];
+export function GameOverScreen({ playerId, view, analysis, saveError, genres, onExit }: Props) {
+  const self = view.players.find((player) => player.id === playerId) ?? view.players[0];
   return (
     <SessionAnalysisView
       score={self?.score ?? 0}
       rank={self?.rank}
       analysis={analysis}
-      attempts={attemptsFromPlayRecords("current", view.playRecords)}
+      attempts={attemptsFromPlayRecords(playerId, view.playRecords)}
       genres={genres}
       saveError={saveError}
       onBack={onExit}

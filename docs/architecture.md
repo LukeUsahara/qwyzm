@@ -32,15 +32,15 @@
 [host peer / api]  集約・永続化・検証
 ```
 
-一人練習の規則はブラウザ内の `game-core` で完結する。問題カタログだけ API から取る。対戦用の host / シグナリングはまだ不要。
+一人練習の規則はブラウザ内の `game-core` で完結する。問題カタログだけ API から取る。対戦の規則も同じ `game-core` を signaling 上で動かす。
 
 ## ディレクトリ
 
 ```
 apps/
-  web/              # React + Vite。一人練習 UI と将来のロビー
-  api/              # Hono。認証・問題・成績。Phase 1 では空スケルトンまで
-  signaling/        # WebRTC 用 WebSocket。Phase 1 では空スケルトンまで
+  web/              # React + Vite。一人練習 UI とカスタム部屋
+  api/              # Hono。認証・問題・成績・内部出題 API
+  signaling/        # 権威 WebSocket。ロビーと対戦ループ。DB は開かない
 
 packages/
   game-core/        # ゲーム規則。React / DOM 非依存。永続化を持たない
@@ -55,7 +55,7 @@ tests/
 docs/               # 本ディレクトリ
 ```
 
-`apps/signaling` を `api` に埋め込まない。REST と長寿命 WebSocket はスケール特性が違う。Phase 11 で権威ゲームサーバーとして中身を入れる。
+`apps/signaling` を `api` に埋め込まない。REST と長寿命 WebSocket はスケール特性が違う。対戦の出題は API `POST /internal/play-questions`（`x-internal-token`）経由。signaling は PGlite / `packages/db` を開かない。
 
 ## パッケージ依存
 
@@ -70,7 +70,8 @@ apps/api --------+----> packages/db -----------+
                  |      (QuestionRepository)   |
                  +----> packages/play-data     |
                  |                             |
-apps/signaling --+----> packages/validation ---+
+apps/signaling --+----> packages/game-core     |
+                 +----> packages/validation ---+
 ```
 
 `play-data` は `QuestionRepository` / `PlayRepository` の抽象を持つ。ゲーム規則はストレージを知らない。問題の実体は PostgreSQL、一人練習の成績はまだブラウザ内。
@@ -116,33 +117,15 @@ Phase 1 のプロフィールはプレースホルダ。レーダーとフレン
 
 問題文は出題中（`reading` / `waitingBuzz`）だけ描画する。`answering*` では DOM にも残さない。
 
-## リアルタイム（後続フェーズ）
+## リアルタイム
 
 ```
-client A  --WS signaling--  apps/signaling
-client B  --WS signaling--       |
-    |                            +-- STUN/TURN（後で）
-    +----- WebRTC DataChannel (star: host hub)
+client A  --WS-->  apps/signaling (GameEngine 正本)
+client B  --WS-->       |
+                        +-- HTTP POST /internal/play-questions --> apps/api --> db
 ```
 
-イベント例:
-
-```ts
-type GameEvent =
-  | { type: "GAME_STARTED"; at: number; settings: GameSettings; players: PlayerSnapshot[] }
-  | { type: "QUESTION_STARTED"; at: number; questionIndex: number; questionId: string }
-  | { type: "BUZZ"; atLocal: number; atSynced: number; playerId: string; seatIndex: number; charIndex: number }
-  | { type: "ANSWER_INPUT_STARTED"; at: number; playerId: string }
-  | { type: "ANSWER_SUBMITTED"; at: number; playerId: string; raw: string }
-  | { type: "TIMEOUT"; at: number; phase: string }
-  | { type: "HOST_MIGRATED"; at: number; newHostId: string };
-```
-
-ホストはイベントを順序付けして配る。各クライアントは同じ reducer で状態を再現し、乖離を検出できるようにする。
-
-## 技術的に変えないもの
-
-WebRTC 自体は今は維持する。一人練習 MVP に通信は不要なので、通信実装でスタックを先行して複雑化しない。
+クライアントは `buzz` / `answer_*` を送り、サーバーは視聴者ごとの `PublicGameView` を `state` で返す。得点・判定・出題順をクライアントは信じない。
 
 ## 認証
 

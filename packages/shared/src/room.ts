@@ -1,6 +1,6 @@
 import type { RuleSet } from "./settings.ts";
 
-export type RoomStatus = "lobby" | "starting";
+export type RoomStatus = "lobby" | "starting" | "in_game" | "finished";
 
 export type RoomPlayerPublic = {
   id: string;

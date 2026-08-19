@@ -12,6 +12,7 @@ import { authClient } from "./auth/client.js";
 import { useSession } from "./stores/session.ts";
 import { useSettings } from "./stores/settings.ts";
 import { PlayScreen } from "./components/play/PlayScreen.tsx";
+import { LOCAL_PLAYER_ID } from "./game/ids.ts";
 import { StartScreen } from "./components/play/StartScreen.tsx";
 import { HistoryScreen } from "./components/history/HistoryScreen.tsx";
 import { HomeScreen } from "./components/home/HomeScreen.tsx";
@@ -311,12 +312,14 @@ export function App() {
           <RoomScreen
             displayName={displayName}
             ruleSet={sessionRuleSet}
+            genres={catalog.genres}
             onClose={openHome}
           />
         ) : play && view ? (
           <PlayScreen
-            engine={play.engine}
+            playerId={LOCAL_PLAYER_ID}
             view={view}
+            sendIntent={(intent) => play.engine.dispatch(LOCAL_PLAYER_ID, intent)}
             analysis={analysis}
             saveError={saveError}
             genres={catalog.genres}

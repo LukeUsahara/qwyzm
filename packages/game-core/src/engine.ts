@@ -747,6 +747,7 @@ export class GameEngine {
       statusLabel: STATUS_LABEL[phase.type],
       lockedPlayerIds: [...this.state.lockedPlayerIds],
       playRecords: this.state.playRecords,
+      readingStartedAt: "readingStartedAt" in phase ? phase.readingStartedAt : null,
     };
 
     switch (phase.type) {

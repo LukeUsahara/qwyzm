@@ -15,6 +15,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@qwyzm/game-core": "workspace:*",
     "@qwyzm/shared": "workspace:*",
     "@qwyzm/validation": "workspace:*",
     "ws": "^8.18.3"

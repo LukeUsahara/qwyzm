@@ -30,6 +30,7 @@ export {
 export { GENRE, GENRES } from "./fixtures/genres.ts";
 export { FIXTURE_QUESTIONS } from "./fixtures/questions.ts";
 
+export { hashSeed, mulberry32 } from "./seeded-random.ts";
 export {
   questionsFromResolvedIds,
   resolveQuestionSetIds,

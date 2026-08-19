@@ -19,6 +19,7 @@
     "@better-auth/drizzle-adapter": "^1.7.0",
     "@hono/node-server": "^1.19.0",
     "@qwyzm/db": "workspace:*",
+    "@qwyzm/game-core": "workspace:*",
     "@qwyzm/play-data": "workspace:*",
     "@qwyzm/shared": "workspace:*",
     "@qwyzm/validation": "workspace:*",

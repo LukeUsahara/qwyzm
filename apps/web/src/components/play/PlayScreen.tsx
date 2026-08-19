@@ -1,8 +1,7 @@
-import type { GameEngine, GameView } from "@qwyzm/game-core";
+import type { GameView, PlayerIntent } from "@qwyzm/game-core";
 import type { SessionAnalysis } from "@qwyzm/play-data";
 import type { Genre } from "@qwyzm/shared";
 import { useEffect } from "react";
-import { LOCAL_PLAYER_ID } from "../../game/ids.ts";
 import { useSettings } from "../../stores/settings.ts";
 import { labelForKeyCode } from "@qwyzm/shared";
 import { AnswerBar } from "./AnswerBar.tsx";
@@ -14,18 +13,29 @@ import { PlayerList } from "./PlayerList.tsx";
 import { QuestionBoard } from "./QuestionBoard.tsx";
 
 type Props = {
-  engine: GameEngine;
+  playerId: string;
   view: GameView;
+  sendIntent: (intent: PlayerIntent) => void;
   analysis: SessionAnalysis | null;
   saveError: string | null;
   genres: Genre[];
   showQuestionGenre: boolean;
   onExit: () => void;
+  mode?: "solo" | "versus";
 };
 
-export function PlayScreen({ engine, view, analysis, saveError, genres, showQuestionGenre, onExit }: Props) {
-  const selfCanBuzz =
-    view.canBuzz && !view.lockedPlayerIds.includes(LOCAL_PLAYER_ID);
+export function PlayScreen({
+  playerId,
+  view,
+  sendIntent,
+  analysis,
+  saveError,
+  genres,
+  showQuestionGenre,
+  onExit,
+  mode = "solo",
+}: Props) {
+  const selfCanBuzz = view.canBuzz && !view.lockedPlayerIds.includes(playerId);
   const answerGauge = view.gauges.find((gauge) => gauge.kind === "answerSubmit");
   const discGauge = view.gauges.find(
     (gauge) =>
@@ -51,15 +61,16 @@ export function PlayScreen({ engine, view, analysis, saveError, genres, showQues
         return;
       }
       event.preventDefault();
-      engine.dispatch(LOCAL_PLAYER_ID, { type: "BUZZ" });
+      sendIntent({ type: "BUZZ" });
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [buzzCode, engine, selfCanBuzz]);
+  }, [buzzCode, sendIntent, selfCanBuzz]);
 
   if (view.phase === "gameOver") {
     return (
       <GameOverScreen
+        playerId={playerId}
         view={view}
         analysis={analysis}
         saveError={saveError}
@@ -74,7 +85,9 @@ export function PlayScreen({ engine, view, analysis, saveError, genres, showQues
       <div className="flex flex-col">
         <header className="mb-6 flex items-end justify-between">
           <div>
-            <p className="text-[11px] tracking-[0.35em] text-muted">QWYZM SOLO</p>
+            <p className="text-[11px] tracking-[0.35em] text-muted">
+              {mode === "versus" ? "QWYZM VERSUS" : "QWYZM SOLO"}
+            </p>
             <p className="mt-1 font-serif text-xl">
               {view.questionNumber ?? "—"} / {view.questionCount}
             </p>
@@ -95,23 +108,14 @@ export function PlayScreen({ engine, view, analysis, saveError, genres, showQues
 
         <div className="mt-6 space-y-5">
           {answerGauge ? <AnswerBar gauge={answerGauge} /> : null}
-          <BuzzButton
-            enabled={selfCanBuzz}
-            onBuzz={() => engine.dispatch(LOCAL_PLAYER_ID, { type: "BUZZ" })}
-          />
+          <BuzzButton enabled={selfCanBuzz} onBuzz={() => sendIntent({ type: "BUZZ" })} />
           <AnswerField
             enabled={view.canAnswer}
             value={view.inputValue}
             prompt={view.prompt}
-            onStart={() =>
-              engine.dispatch(LOCAL_PLAYER_ID, { type: "ANSWER_START" })
-            }
-            onInput={(value) =>
-              engine.dispatch(LOCAL_PLAYER_ID, { type: "ANSWER_INPUT", value })
-            }
-            onSubmit={() =>
-              engine.dispatch(LOCAL_PLAYER_ID, { type: "ANSWER_SUBMIT" })
-            }
+            onStart={() => sendIntent({ type: "ANSWER_START" })}
+            onInput={(value) => sendIntent({ type: "ANSWER_INPUT", value })}
+            onSubmit={() => sendIntent({ type: "ANSWER_SUBMIT" })}
           />
           <p className="text-center text-[11px] text-muted">
             早押し: {labelForKeyCode(buzzCode)} またはボタン

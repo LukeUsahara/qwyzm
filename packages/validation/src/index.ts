@@ -272,8 +272,36 @@ export const clientRoomMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("update_rules"), ruleSet: ruleSetSchema }),
   z.object({ type: z.literal("start") }),
   z.object({ type: z.literal("ping"), t0: z.number() }),
+  z.object({
+    type: z.literal("buzz"),
+    clientTime: z.number(),
+    seq: z.number().int(),
+  }),
+  z.object({ type: z.literal("answer_start"), clientTime: z.number() }),
+  z.object({
+    type: z.literal("answer_input"),
+    text: z.string(),
+    clientTime: z.number(),
+  }),
+  z.object({
+    type: z.literal("answer_submit"),
+    text: z.string(),
+    clientTime: z.number(),
+  }),
+  z.object({
+    type: z.literal("resume"),
+    roomCode: roomCodeSchema,
+    reconnectToken: uuidSchema,
+  }),
 ]);
 
 export type ClientRoomMessage = z.infer<typeof clientRoomMessageSchema>;
+
+export const playQuestionsRequestSchema = z.object({
+  questionSetId: uuidSchema.nullable(),
+  genreFilter: genrePlayFilterSchema,
+  count: questionCountSchema,
+  seed: z.string().min(1).max(80),
+});
 
 

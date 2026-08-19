@@ -211,6 +211,7 @@ export type GameView = {
   statusLabel: string;
   lockedPlayerIds: string[];
   playRecords: QuestionPlayRecord[];
+  readingStartedAt: number | null;
 };
 
 export const SOLO_DEFAULT_SETTINGS: GameSettings = {

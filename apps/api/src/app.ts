@@ -8,19 +8,25 @@ import type {
   QuestionRepository,
   QuestionSetRepository,
 } from "@qwyzm/play-data";
+import { pickQuestions } from "@qwyzm/game-core";
 import {
+  hashSeed,
   isOfficialQuestion,
+  mulberry32,
   questionsFromResolvedIds,
   resolveQuestionSetIds,
+  toPlayQuestion,
 } from "@qwyzm/play-data";
 import {
   catalogQuestionWriteSchema,
   genreIdsQuerySchema,
+  playQuestionsRequestSchema,
   questionSetHttpWriteSchema,
   storedGameSchema,
   uuidSchema,
 } from "@qwyzm/validation";
 import { authOrigins } from "./auth.ts";
+import { expectedInternalToken, internalTokenMatches } from "./internal-token.ts";
 
 export type AuthUser = {
   id: string;
@@ -57,6 +63,7 @@ export function createApp(
     auth?: AuthGateway;
     plays?: (userId: string) => PlayRepository;
     questionSets?: QuestionSetRepository;
+    internalToken?: string;
   } = {},
 ): Hono {
   const app = new Hono();
@@ -447,6 +454,53 @@ export function createApp(
       }
       return c.json({ error: "failed to delete set" }, 400);
     }
+  });
+
+  app.post("/internal/play-questions", async (c) => {
+    const expected = extras.internalToken ?? expectedInternalToken();
+    if (!internalTokenMatches(c.req.header("x-internal-token") ?? undefined, expected)) {
+      return c.json({ error: "unauthorized" }, 401);
+    }
+    let body: unknown;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "invalid json" }, 400);
+    }
+    const parsed = playQuestionsRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: "invalid request" }, 400);
+    }
+    const [catalog, genres] = await Promise.all([
+      questions.listQuestions({ allMain: true, includeUnique: true }),
+      questions.listGenres(),
+    ]);
+    let set = null;
+    if (parsed.data.questionSetId !== null) {
+      if (extras.questionSets === undefined) {
+        return c.json({ error: "unavailable" }, 503);
+      }
+      set = await extras.questionSets.getSet(parsed.data.questionSetId, null);
+      if (set === null) {
+        return c.json({ error: "not found" }, 404);
+      }
+    }
+    const ids = resolveQuestionSetIds({
+      set,
+      genreFilter: parsed.data.genreFilter,
+      catalog,
+      genres,
+    });
+    const pool = questionsFromResolvedIds(catalog, ids).map(toPlayQuestion);
+    const picked = pickQuestions(
+      pool,
+      parsed.data.count,
+      mulberry32(hashSeed(parsed.data.seed)),
+    );
+    if (picked.length < 1) {
+      return c.json({ error: "no questions" }, 400);
+    }
+    return c.json({ questions: picked });
   });
 
   return app;

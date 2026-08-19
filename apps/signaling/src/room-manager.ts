@@ -161,15 +161,15 @@ export function createRoomManager(options: { random?: () => number } = {}) {
         if (existing === undefined) {
           throw new Error("not_found");
         }
+        bySocket.delete(existing.socketId);
         existing.connected = true;
         existing.socketId = socketId;
-        existing.displayName = displayName;
         bySocket.set(socketId, existing.id);
         byPlayer.set(existing.id, room.code);
         return { room: snapshot(room), player: publicPlayer(existing) };
       }
       if (room.status !== "lobby") {
-        throw new Error("not_joinable");
+        throw new Error(room.status === "in_game" ? "match_in_progress" : "not_joinable");
       }
       if (room.players.length >= MAX_PLAYERS) {
         throw new Error("room_full");
@@ -268,16 +268,40 @@ export function createRoomManager(options: { random?: () => number } = {}) {
       if (room.status !== "lobby") {
         throw new Error("not_lobby");
       }
-      const connected = room.players.filter((player) => player.connected).length;
-      if (connected < MIN_PLAYERS_VERSUS) {
+      const dropped = room.players.filter((player) => !player.connected);
+      for (const player of dropped) {
+        byPlayer.delete(player.id);
+        bySocket.delete(player.socketId);
+      }
+      room.players = room.players.filter((player) => player.connected);
+      if (room.players.length < MIN_PLAYERS_VERSUS) {
         throw new Error("not_enough_players");
       }
       room.status = "starting";
       return snapshot(room);
     },
 
+    setStatus(code: string, status: RoomStatus) {
+      const room = rooms.get(code);
+      if (room) {
+        room.status = status;
+      }
+    },
+
+    revertToLobby(code: string) {
+      const room = rooms.get(code);
+      if (room && room.status === "starting") {
+        room.status = "lobby";
+      }
+    },
+
     snapshotForPlayer(playerId: string): RoomSnapshot {
       return snapshot(requireRoom(playerId));
+    },
+
+    snapshotByCode(code: string): RoomSnapshot | null {
+      const room = rooms.get(code);
+      return room === undefined ? null : snapshot(room);
     },
 
     playerIdForSocket(socketId: string): string | undefined {
