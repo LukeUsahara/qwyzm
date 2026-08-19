@@ -2,9 +2,10 @@ type Props = {
   onSolo: () => void;
   onHistory: () => void;
   onSettings: () => void;
+  onSets: () => void;
 };
 
-export function HomeScreen({ onSolo, onHistory, onSettings }: Props) {
+export function HomeScreen({ onSolo, onHistory, onSettings, onSets }: Props) {
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-8">
       <div>
@@ -22,7 +23,15 @@ export function HomeScreen({ onSolo, onHistory, onSettings }: Props) {
           className="border border-gold px-8 py-4 text-left"
         >
           <p className="text-sm tracking-[0.3em] text-gold">一人で早押し</p>
-          <p className="mt-1 text-xs text-muted">ジャンルを選んで練習する</p>
+          <p className="mt-1 text-xs text-muted">ジャンルまたは問題セットで練習する</p>
+        </button>
+        <button
+          type="button"
+          onClick={onSets}
+          className="border border-line px-8 py-4 text-left"
+        >
+          <p className="text-sm tracking-[0.3em] text-paper">問題セット</p>
+          <p className="mt-1 text-xs text-muted">ジャンル指定や手選びの出題源</p>
         </button>
         <button
           type="button"

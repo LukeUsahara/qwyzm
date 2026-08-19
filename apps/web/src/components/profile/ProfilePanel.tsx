@@ -11,6 +11,7 @@ type Props = {
   onOpenHome: () => void;
   onOpenHistory: () => void;
   onOpenSettings: () => void;
+  onOpenSets: () => void;
   onOpenAdmin?: () => void;
 };
 
@@ -22,6 +23,7 @@ export function ProfilePanel({
   onOpenHome,
   onOpenHistory,
   onOpenSettings,
+  onOpenSets,
   onOpenAdmin,
 }: Props) {
   return (
@@ -60,6 +62,13 @@ export function ProfilePanel({
             className="border border-line px-3 py-1.5 text-xs tracking-widest text-paper"
           >
             履歴
+          </button>
+          <button
+            type="button"
+            onClick={onOpenSets}
+            className="border border-line px-3 py-1.5 text-xs tracking-widest text-paper"
+          >
+            問題セット
           </button>
           <button
             type="button"

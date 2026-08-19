@@ -66,6 +66,22 @@ export {
   labelForKeyCode,
 } from "./settings.ts";
 
+export type {
+  QuestionSet,
+  QuestionSetSource,
+  QuestionSetVisibility,
+} from "./question-set.ts";
+export {
+  LOCAL_QUESTION_SET_PREFIX,
+  QUESTION_SET_SOURCES,
+  QUESTION_SET_STORAGE_KEY,
+  QUESTION_SET_VISIBILITIES,
+  criteriaFromFilter,
+  emptyQuestionSet,
+  isLocalQuestionSetId,
+  newLocalQuestionSetId,
+} from "./question-set.ts";
+
 export type { RevealSpeed } from "./constants.ts";
 export {
   ANSWER_START_MS,

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { GameEngine } from "@qwyzm/game-core";
-import { summarizeProfile } from "@qwyzm/play-data";
-import type { RuleSet } from "@qwyzm/shared";
+import { summarizeProfile, questionsFromResolvedIds, resolveQuestionSetIds } from "@qwyzm/play-data";
+import { isLocalQuestionSetId, type RuleSet } from "@qwyzm/shared";
 import { createSoloEngine } from "./game/createSoloEngine.ts";
 import { useGameView } from "./game/useGameView.ts";
 import { usePlayHistory } from "./play-data/usePlayHistory.ts";
@@ -16,8 +16,10 @@ import { StartScreen } from "./components/play/StartScreen.tsx";
 import { HistoryScreen } from "./components/history/HistoryScreen.tsx";
 import { HomeScreen } from "./components/home/HomeScreen.tsx";
 import { SettingsScreen } from "./components/settings/SettingsScreen.tsx";
+import { QuestionSetsScreen } from "./components/sets/QuestionSetsScreen.tsx";
 import { ProfilePanel } from "./components/profile/ProfilePanel.tsx";
 import { AdminCatalogScreen } from "./components/admin/AdminCatalogScreen.tsx";
+import { useQuestionSets } from "./play-data/useQuestionSets.ts";
 
 type ActivePlay = {
   engine: GameEngine;
@@ -25,7 +27,7 @@ type ActivePlay = {
   startedAt: string;
 };
 
-type MainView = "home" | "solo" | "play" | "history" | "settings" | "admin";
+type MainView = "home" | "solo" | "play" | "history" | "settings" | "sets" | "admin";
 
 export function App() {
   const { data: session, isPending } = authClient.useSession();
@@ -35,6 +37,7 @@ export function App() {
   const role = useSession((s) => s.role);
   const questionCount = useSession((s) => s.questionCount);
   const genreFilter = useSession((s) => s.genreFilter);
+  const questionSetId = useSession((s) => s.questionSetId);
   const showQuestionGenre = useSession((s) => s.showQuestionGenre);
   const revealSpeed = useSession((s) => s.revealSpeed);
   const wrongAnswerRule = useSession((s) => s.wrongAnswerRule);
@@ -47,6 +50,7 @@ export function App() {
   const setDisplayName = useSession((s) => s.setDisplayName);
   const setQuestionCount = useSession((s) => s.setQuestionCount);
   const setGenreFilter = useSession((s) => s.setGenreFilter);
+  const setQuestionSetId = useSession((s) => s.setQuestionSetId);
   const setShowQuestionGenre = useSession((s) => s.setShowQuestionGenre);
   const setRevealSpeed = useSession((s) => s.setRevealSpeed);
   const setWrongAnswerRule = useSession((s) => s.setWrongAnswerRule);
@@ -66,7 +70,23 @@ export function App() {
     () => createHttpQuestionRepository({ baseUrl: "/api" }),
     [],
   );
-  const catalog = useQuestionCatalog(repo, genreFilter);
+  const catalog = useQuestionCatalog(repo);
+  const questionSets = useQuestionSets(role);
+  const selectedSet =
+    questionSets.sets.find((set) => set.id === questionSetId) ?? null;
+  const playPool = useMemo(
+    () =>
+      questionsFromResolvedIds(
+        catalog.questions,
+        resolveQuestionSetIds({
+          set: selectedSet,
+          genreFilter,
+          catalog: catalog.questions,
+          genres: catalog.genres,
+        }),
+      ),
+    [catalog.genres, catalog.questions, genreFilter, selectedSet],
+  );
   const selectedGenreIds = useMemo(
     () => (genreFilter.allMain ? [] : [...genreFilter.selectedGenreIds]),
     [genreFilter.allMain, genreFilter.selectedGenreIds],
@@ -94,7 +114,7 @@ export function App() {
     () => ({
       questionCount,
       genreFilter,
-      questionSetId: null,
+      questionSetId,
       correctPoints,
       missPenalty,
       missPoints,
@@ -107,6 +127,7 @@ export function App() {
     [
       questionCount,
       genreFilter,
+      questionSetId,
       correctPoints,
       missPenalty,
       missPoints,
@@ -149,18 +170,45 @@ export function App() {
   }, [isPending, session, setGuest, setUser, userId]);
 
   useEffect(() => {
-    if (catalog.loading) {
+    if (userId === null) {
       return;
     }
-    const next = Math.min(questionCount, Math.max(catalog.questions.length, 1));
+    if (
+      settingsRuleSet.questionSetId !== null &&
+      isLocalQuestionSetId(settingsRuleSet.questionSetId)
+    ) {
+      patchSettings({
+        ruleSet: { ...settingsRuleSet, questionSetId: null },
+      });
+    }
+  }, [userId, settingsRuleSet, patchSettings]);
+
+  useEffect(() => {
+    if (catalog.loading || questionSets.loading) {
+      return;
+    }
+    if (
+      questionSetId !== null &&
+      questionSets.error === null &&
+      !questionSets.sets.some((set) => set.id === questionSetId)
+    ) {
+      setQuestionSetId(null);
+      return;
+    }
+    const next = Math.min(questionCount, Math.max(playPool.length, 1));
     if (next !== questionCount) {
       setQuestionCount(next);
     }
   }, [
     catalog.loading,
-    catalog.questions.length,
+    playPool.length,
     questionCount,
+    questionSetId,
+    questionSets.error,
+    questionSets.loading,
+    questionSets.sets,
     setQuestionCount,
+    setQuestionSetId,
   ]);
 
   const openHome = () => {
@@ -185,6 +233,18 @@ export function App() {
     setViewName("settings");
   };
 
+  const openSets = () => {
+    setPlay(null);
+    setViewName("sets");
+  };
+
+  const chooseQuestionSet = (id: string | null) => {
+    setQuestionSetId(id);
+    patchSettings({
+      ruleSet: { ...settingsRuleSet, questionSetId: id },
+    });
+  };
+
   return (
     <div className="flex h-full min-h-0">
       <ProfilePanel
@@ -195,6 +255,7 @@ export function App() {
         onOpenHome={openHome}
         onOpenHistory={openHistory}
         onOpenSettings={openSettings}
+        onOpenSets={openSets}
         onOpenAdmin={
           role === "admin"
             ? () => {
@@ -225,6 +286,20 @@ export function App() {
           />
         ) : viewName === "settings" ? (
           <SettingsScreen onClose={openHome} />
+        ) : viewName === "sets" ? (
+          <QuestionSetsScreen
+            role={role}
+            userId={userId}
+            sets={questionSets.sets}
+            genres={catalog.genres}
+            catalog={catalog.questions}
+            loading={questionSets.loading}
+            error={questionSets.error}
+            onClose={openHome}
+            onSave={questionSets.save}
+            onRemove={questionSets.remove}
+            createDraft={questionSets.createDraft}
+          />
         ) : play && view ? (
           <PlayScreen
             engine={play.engine}
@@ -245,18 +320,21 @@ export function App() {
               displayName={displayName}
               questionCount={questionCount}
               genreFilter={genreFilter}
+              questionSetId={questionSetId}
+              questionSets={questionSets.sets}
               showQuestionGenre={showQuestionGenre}
               revealSpeed={revealSpeed}
               wrongAnswerRule={wrongAnswerRule}
               missPenalty={missPenalty}
               winCondition={winCondition}
               genres={catalog.genres}
-              poolSize={catalog.questions.length}
-              busy={catalog.loading}
+              poolSize={playPool.length}
+              busy={catalog.loading || questionSets.loading}
               authenticated={userId !== null}
               onDisplayName={setDisplayName}
               onQuestionCount={setQuestionCount}
               onGenreFilter={setGenreFilter}
+              onQuestionSetId={chooseQuestionSet}
               onShowQuestionGenre={(value) => {
                 setShowQuestionGenre(value);
                 patchSettings({ showQuestionGenre: value });
@@ -271,8 +349,7 @@ export function App() {
                   engine: createSoloEngine({
                     displayName,
                     ruleSet: { ...sessionRuleSet, questionCount: count },
-                    pool: catalog.questions,
-                    genres: catalog.genres,
+                    pool: playPool,
                     recentQuestionIds,
                   }),
                   gameId: crypto.randomUUID(),
@@ -287,6 +364,7 @@ export function App() {
             onSolo={openSolo}
             onHistory={openHistory}
             onSettings={openSettings}
+            onSets={openSets}
           />
         )}
       </main>

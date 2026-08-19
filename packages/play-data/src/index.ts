@@ -31,6 +31,22 @@ export { GENRE, GENRES } from "./fixtures/genres.ts";
 export { FIXTURE_QUESTIONS } from "./fixtures/questions.ts";
 
 export {
+  questionsFromResolvedIds,
+  resolveQuestionSetIds,
+} from "./question-set.ts";
+export type {
+  QuestionSetActor,
+  QuestionSetRepository,
+} from "./question-set-repository.ts";
+export {
+  canReadSet,
+  canWriteSet,
+  createMemoryQuestionSetRepository,
+} from "./question-set-repository.ts";
+export { createJsonQuestionSetStore } from "./json-question-sets.ts";
+export type { QuestionSetDocument } from "./json-question-sets.ts";
+
+export {
   PLAY_DATA_STORAGE_KEY,
   createJsonPlayRepository,
   createMemoryKeyValueStore,

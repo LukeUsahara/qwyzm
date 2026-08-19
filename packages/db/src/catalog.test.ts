@@ -52,6 +52,8 @@ describe("db schema and seed", () => {
       "genres",
       "question_genres",
       "question_play_records",
+      "question_sets",
+      "question_set_items",
       "users",
       "sessions",
       "accounts",

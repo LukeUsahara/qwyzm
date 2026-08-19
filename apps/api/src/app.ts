@@ -1,12 +1,22 @@
 import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
 import type { AccountRole } from "@qwyzm/shared";
-import { isAccountRole, isAdminRole } from "@qwyzm/shared";
-import type { PlayRepository, QuestionCatalogItem, QuestionRepository } from "@qwyzm/play-data";
-import { isOfficialQuestion } from "@qwyzm/play-data";
+import { emptyQuestionSet, isAccountRole, isAdminRole } from "@qwyzm/shared";
+import type {
+  PlayRepository,
+  QuestionCatalogItem,
+  QuestionRepository,
+  QuestionSetRepository,
+} from "@qwyzm/play-data";
+import {
+  isOfficialQuestion,
+  questionsFromResolvedIds,
+  resolveQuestionSetIds,
+} from "@qwyzm/play-data";
 import {
   catalogQuestionWriteSchema,
   genreIdsQuerySchema,
+  questionSetHttpWriteSchema,
   storedGameSchema,
   uuidSchema,
 } from "@qwyzm/validation";
@@ -46,6 +56,7 @@ export function createApp(
   extras: {
     auth?: AuthGateway;
     plays?: (userId: string) => PlayRepository;
+    questionSets?: QuestionSetRepository;
   } = {},
 ): Hono {
   const app = new Hono();
@@ -268,6 +279,174 @@ export function createApp(
       toCatalogItem({ ...parsed.data, id: idParsed.data }, access.user.id),
     );
     return c.json({ question: saved });
+  });
+
+  async function questionSetActor(c: Context) {
+    const session = await extras.auth?.getSession(c.req.raw.headers);
+    if (!session) {
+      return null;
+    }
+    return { id: session.user.id, role: session.user.role };
+  }
+
+  app.get("/api/question-sets", async (c) => {
+    if (extras.questionSets === undefined) {
+      return c.json({ error: "unavailable" }, 503);
+    }
+    const sets = await extras.questionSets.listSets(await questionSetActor(c));
+    return c.json({ sets });
+  });
+
+  app.post("/api/question-sets", async (c) => {
+    if (extras.questionSets === undefined) {
+      return c.json({ error: "unavailable" }, 503);
+    }
+    const session = await extras.auth?.getSession(c.req.raw.headers);
+    if (!session) {
+      return c.json({ error: "unauthorized" }, 401);
+    }
+    let body: unknown;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "invalid json" }, 400);
+    }
+    const parsed = questionSetHttpWriteSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: "invalid set" }, 400);
+    }
+    const id = parsed.data.id ?? crypto.randomUUID();
+    try {
+      const saved = await extras.questionSets.saveSet(
+        emptyQuestionSet({
+          id,
+          name: parsed.data.name,
+          visibility: parsed.data.visibility,
+          source: parsed.data.source,
+          criteria: parsed.data.criteria,
+          questionIds: parsed.data.questionIds,
+        }),
+        { id: session.user.id, role: session.user.role },
+      );
+      return c.json({ set: saved }, 201);
+    } catch (error) {
+      if (error instanceof Error && error.message === "forbidden") {
+        return c.json({ error: "forbidden" }, 403);
+      }
+      return c.json({ error: "failed to save set" }, 400);
+    }
+  });
+
+  app.get("/api/question-sets/:id/questions", async (c) => {
+    if (extras.questionSets === undefined) {
+      return c.json({ error: "unavailable" }, 503);
+    }
+    const parsed = uuidSchema.safeParse(c.req.param("id"));
+    if (!parsed.success) {
+      return c.json({ error: "invalid id" }, 400);
+    }
+    const set = await extras.questionSets.getSet(parsed.data, await questionSetActor(c));
+    if (set === null) {
+      return c.json({ error: "not found" }, 404);
+    }
+    const [catalog, genres] = await Promise.all([
+      questions.listQuestions({ allMain: true, includeUnique: true }),
+      questions.listGenres(),
+    ]);
+    const ids = resolveQuestionSetIds({ set, catalog, genres });
+    return c.json({ questions: questionsFromResolvedIds(catalog, ids) });
+  });
+
+  app.get("/api/question-sets/:id", async (c) => {
+    if (extras.questionSets === undefined) {
+      return c.json({ error: "unavailable" }, 503);
+    }
+    const parsed = uuidSchema.safeParse(c.req.param("id"));
+    if (!parsed.success) {
+      return c.json({ error: "invalid id" }, 400);
+    }
+    const set = await extras.questionSets.getSet(parsed.data, await questionSetActor(c));
+    if (set === null) {
+      return c.json({ error: "not found" }, 404);
+    }
+    return c.json({ set });
+  });
+
+  app.patch("/api/question-sets/:id", async (c) => {
+    if (extras.questionSets === undefined) {
+      return c.json({ error: "unavailable" }, 503);
+    }
+    const session = await extras.auth?.getSession(c.req.raw.headers);
+    if (!session) {
+      return c.json({ error: "unauthorized" }, 401);
+    }
+    const idParsed = uuidSchema.safeParse(c.req.param("id"));
+    if (!idParsed.success) {
+      return c.json({ error: "invalid id" }, 400);
+    }
+    let body: unknown;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "invalid json" }, 400);
+    }
+    const parsed = questionSetHttpWriteSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: "invalid set" }, 400);
+    }
+    const actor = { id: session.user.id, role: session.user.role };
+    const existing = await extras.questionSets.getSet(idParsed.data, actor);
+    if (existing === null) {
+      return c.json({ error: "not found" }, 404);
+    }
+    try {
+      const saved = await extras.questionSets.saveSet(
+        emptyQuestionSet({
+          ...existing,
+          id: idParsed.data,
+          name: parsed.data.name,
+          visibility: parsed.data.visibility,
+          source: parsed.data.source,
+          criteria: parsed.data.criteria,
+          questionIds: parsed.data.questionIds,
+        }),
+        actor,
+      );
+      return c.json({ set: saved });
+    } catch (error) {
+      if (error instanceof Error && error.message === "forbidden") {
+        return c.json({ error: "forbidden" }, 403);
+      }
+      return c.json({ error: "failed to save set" }, 400);
+    }
+  });
+
+  app.delete("/api/question-sets/:id", async (c) => {
+    if (extras.questionSets === undefined) {
+      return c.json({ error: "unavailable" }, 503);
+    }
+    const session = await extras.auth?.getSession(c.req.raw.headers);
+    if (!session) {
+      return c.json({ error: "unauthorized" }, 401);
+    }
+    const parsed = uuidSchema.safeParse(c.req.param("id"));
+    if (!parsed.success) {
+      return c.json({ error: "invalid id" }, 400);
+    }
+    const actor = { id: session.user.id, role: session.user.role };
+    const existing = await extras.questionSets.getSet(parsed.data, actor);
+    if (existing === null) {
+      return c.json({ error: "not found" }, 404);
+    }
+    try {
+      await extras.questionSets.deleteSet(parsed.data, actor);
+      return c.json({ ok: true });
+    } catch (error) {
+      if (error instanceof Error && error.message === "forbidden") {
+        return c.json({ error: "forbidden" }, 403);
+      }
+      return c.json({ error: "failed to delete set" }, 400);
+    }
   });
 
   return app;

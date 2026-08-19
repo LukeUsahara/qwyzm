@@ -3,6 +3,7 @@ export { DEFAULT_DATABASE_URL, databaseUrl, createPostgresClient, createPostgres
 export type { AppDb } from "./client.ts";
 export { createDrizzleQuestionRepository } from "./question-repository.ts";
 export { createDrizzlePlayRepository } from "./play-repository.ts";
+export { createDrizzleQuestionSetRepository } from "./question-set-repository.ts";
 export { seedCatalog, catalogAnswerRows } from "./seed.ts";
 export { seedAdminUser, ADMIN_SEED } from "./seed-admin.ts";
 export { drizzleFolder } from "./migrate.ts";

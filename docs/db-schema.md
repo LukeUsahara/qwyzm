@@ -13,6 +13,9 @@ users
         ├── game_questions ── questions
         └── question_play_records ── questions / users
 
+question_sets
+  └── question_set_items ── questions / question_sets
+
 genres (self parent_id)
   └── question_genres ── questions
 
@@ -32,6 +35,8 @@ answer_kind:          correct | close
 play_result:          correct | incorrect | unanswered | withdrawn
 difficulty_rank:      c_minus .. ss_plus  （15段階。NULL 可）
 difficulty_band:      easy | normal | slightly_hard | hard | extreme
+question_set_visibility: official | private
+question_set_source:     filter | manual
 ```
 
 難易度 15 段階と 5 大分類の対応:
@@ -186,6 +191,29 @@ UNIQUE `(question_id, kind, normalized_text)`。
 - `(game_id)`
 
 直近 N 問回避は専用テーブルを持たず、この記録から取る。初期 N = 100。
+
+### question_sets
+
+出題源。`source = filter` は `criteria`（GenrePlayFilter）でカタログを絞る。`source = manual` は `question_set_items` の順。
+
+- `id` UUID PK
+- `owner_user_id` UUID NULL  FK users（公式は NULL、private は所有者）
+- `name` TEXT NOT NULL
+- `visibility` question_set_visibility NOT NULL DEFAULT private
+- `source` question_set_source NOT NULL
+- `criteria` JSONB NOT NULL
+- `created_at` / `updated_at` TIMESTAMPTZ
+
+公式セットの読み取りは誰でも可。書き込みは admin のみ。private は所有者のみ。ゲストのセットは PostgreSQL に入れず `qwyzm.questionSets.v1`。
+
+### question_set_items
+
+手動セットの問題と順番。
+
+- `set_id` UUID NOT NULL
+- `question_id` UUID NOT NULL
+- `order_index` INT NOT NULL
+- PK (`set_id`, `question_id`)
 
 ## 難易度算出のために今やっておくこと
 

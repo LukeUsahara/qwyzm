@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
-import type { QuestionCatalogItem, QuestionListFilter, QuestionRepository } from "@qwyzm/play-data";
-import type { Genre, GenrePlayFilter } from "@qwyzm/shared";
+import { useEffect, useState } from "react";
+import type { QuestionCatalogItem, QuestionRepository } from "@qwyzm/play-data";
+import type { Genre } from "@qwyzm/shared";
 
-export function useQuestionCatalog(
-  repo: QuestionRepository,
-  filter: GenrePlayFilter,
-): {
+const FULL_CATALOG = { allMain: true, includeUnique: true } as const;
+
+export function useQuestionCatalog(repo: QuestionRepository): {
   genres: Genre[];
   questions: QuestionCatalogItem[];
   loading: boolean;
@@ -17,20 +16,6 @@ export function useQuestionCatalog(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
-  const listFilter: QuestionListFilter = useMemo(
-    () => ({
-      allMain: filter.allMain,
-      genreIds: filter.selectedGenreIds,
-      includeUnique: filter.includeUnique,
-      uniqueGenreIds: filter.selectedUniqueGenreIds,
-    }),
-    [
-      filter.allMain,
-      filter.includeUnique,
-      filter.selectedGenreIds,
-      filter.selectedUniqueGenreIds,
-    ],
-  );
 
   useEffect(() => {
     let cancelled = false;
@@ -39,7 +24,7 @@ export function useQuestionCatalog(
       try {
         const [nextGenres, nextQuestions] = await Promise.all([
           repo.listGenres(),
-          repo.listQuestions(listFilter),
+          repo.listQuestions(FULL_CATALOG),
         ]);
         if (cancelled) {
           return;
@@ -60,7 +45,7 @@ export function useQuestionCatalog(
     return () => {
       cancelled = true;
     };
-  }, [repo, listFilter, reloadToken]);
+  }, [repo, reloadToken]);
 
   return {
     genres,

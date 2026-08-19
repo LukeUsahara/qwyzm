@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createMemoryPlayRepository,
   createMemoryQuestionRepository,
+  createMemoryQuestionSetRepository,
   filterCatalogByGenres,
   FIXTURE_QUESTIONS,
   GENRE,
@@ -237,3 +238,117 @@ describe("admin question API", () => {
     );
   });
 });
+
+describe("question set API", () => {
+  const sets = createMemoryQuestionSetRepository();
+  const aliceApp = createApp(questions, {
+    auth: fakeAuth(USER_A),
+    questionSets: sets,
+  });
+  const bobApp = createApp(questions, {
+    auth: fakeAuth(USER_B),
+    questionSets: sets,
+  });
+  const adminApp = createApp(questions, {
+    auth: fakeAuth(ADMIN),
+    questionSets: sets,
+  });
+  const guestApp = createApp(questions, {
+    auth: fakeAuth(null),
+    questionSets: sets,
+  });
+
+  it("rejects guest writes and hides private sets", async () => {
+    const created = await guestApp.request("/api/question-sets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "ゲスト", source: "filter" }),
+    });
+    expect(created.status).toBe(401);
+
+    const saved = await aliceApp.request("/api/question-sets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Alice地理",
+        source: "filter",
+        criteria: {
+          allMain: false,
+          selectedGenreIds: [GENRE.geography],
+          includeUnique: false,
+          selectedUniqueGenreIds: [],
+        },
+      }),
+    });
+    expect(saved.status).toBe(201);
+    const savedBody = (await saved.json()) as { set: { id: string; ownerId: string } };
+    expect(savedBody.set.ownerId).toBe(USER_A.id);
+
+    const bobGet = await bobApp.request(`/api/question-sets/${savedBody.set.id}`);
+    expect(bobGet.status).toBe(404);
+    const guestList = await guestApp.request("/api/question-sets");
+    const guestBody = (await guestList.json()) as { sets: { id: string }[] };
+    expect(guestBody.sets.some((set) => set.id === savedBody.set.id)).toBe(false);
+  });
+
+  it("resolves filter and manual sets and lets only admins write official", async () => {
+    const forbidden = await aliceApp.request("/api/question-sets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "公式",
+        source: "filter",
+        visibility: "official",
+      }),
+    });
+    expect(forbidden.status).toBe(403);
+
+    const official = await adminApp.request("/api/question-sets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "公式地理",
+        source: "filter",
+        visibility: "official",
+        criteria: {
+          allMain: false,
+          selectedGenreIds: [GENRE.geography],
+          includeUnique: false,
+          selectedUniqueGenreIds: [],
+        },
+      }),
+    });
+    expect(official.status).toBe(201);
+    const officialBody = (await official.json()) as { set: { id: string; ownerId: string | null } };
+    expect(officialBody.set.ownerId).toBeNull();
+
+    const guestGet = await guestApp.request(`/api/question-sets/${officialBody.set.id}`);
+    expect(guestGet.status).toBe(200);
+
+    const resolved = await guestApp.request(
+      `/api/question-sets/${officialBody.set.id}/questions`,
+    );
+    expect(resolved.status).toBe(200);
+    const resolvedBody = (await resolved.json()) as { questions: { id: string }[] };
+    expect(resolvedBody.questions.some((question) => question.id === FUJI)).toBe(true);
+    expect(resolvedBody.questions.some((question) => question.id === PEARL)).toBe(false);
+
+    const manual = await aliceApp.request("/api/question-sets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "手選び",
+        source: "manual",
+        questionIds: [PEARL, FUJI],
+      }),
+    });
+    expect(manual.status).toBe(201);
+    const manualBody = (await manual.json()) as { set: { id: string } };
+    const manualResolved = await aliceApp.request(
+      `/api/question-sets/${manualBody.set.id}/questions`,
+    );
+    const manualQuestions = (await manualResolved.json()) as { questions: { id: string }[] };
+    expect(manualQuestions.questions.map((question) => question.id)).toEqual([PEARL, FUJI]);
+  });
+});
+

@@ -278,3 +278,50 @@ export const questionPlayRecords = pgTable(
     ),
   ],
 );
+
+export const questionSetVisibilityEnum = pgEnum("question_set_visibility", [
+  "official",
+  "private",
+]);
+export const questionSetSourceEnum = pgEnum("question_set_source", [
+  "filter",
+  "manual",
+]);
+
+export const questionSets = pgTable("question_sets", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  ownerUserId: uuid("owner_user_id").references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  visibility: questionSetVisibilityEnum("visibility").notNull().default("private"),
+  source: questionSetSourceEnum("source").notNull(),
+  criteria: jsonb("criteria")
+    .$type<{
+      allMain: boolean;
+      selectedGenreIds: string[];
+      includeUnique: boolean;
+      selectedUniqueGenreIds: string[];
+    }>()
+    .notNull()
+    .default({
+      allMain: true,
+      selectedGenreIds: [],
+      includeUnique: false,
+      selectedUniqueGenreIds: [],
+    }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const questionSetItems = pgTable(
+  "question_set_items",
+  {
+    setId: uuid("set_id")
+      .notNull()
+      .references(() => questionSets.id, { onDelete: "cascade" }),
+    questionId: uuid("question_id")
+      .notNull()
+      .references(() => questions.id),
+    orderIndex: integer("order_index").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.setId, table.questionId] })],
+);

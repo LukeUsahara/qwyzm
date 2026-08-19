@@ -3,7 +3,10 @@ import {
   answerInputSchema,
   catalogQuestionWriteSchema,
   handleSchema,
+  localQuestionSetIdSchema,
   migrateSettings,
+  questionSetHttpWriteSchema,
+  questionSetWriteSchema,
   ruleSetSchema,
 } from "./index.ts";
 import { DEFAULT_RULE_SET, DEFAULT_USER_SETTINGS } from "@qwyzm/shared";
@@ -110,5 +113,35 @@ describe("migrateSettings", () => {
     expect(migrated.keyBind.buzzCode).toBe("KeyJ");
     expect(migrated.volume).toEqual(DEFAULT_USER_SETTINGS.volume);
     expect(migrated.showQuestionGenre).toBe(false);
+  });
+});
+
+describe("questionSetWriteSchema", () => {
+  it("accepts local ids and rejects unknown fields on source", () => {
+    expect(
+      localQuestionSetIdSchema.safeParse("local:c0a80600-0000-4000-8000-000000000001").success,
+    ).toBe(true);
+    expect(localQuestionSetIdSchema.safeParse("c0a80600-0000-4000-8000-000000000001").success).toBe(
+      false,
+    );
+    expect(
+      questionSetWriteSchema.safeParse({
+        name: "地理だけ",
+        source: "filter",
+      }).success,
+    ).toBe(true);
+    expect(
+      questionSetWriteSchema.safeParse({
+        name: "x",
+        source: "playlist",
+      }).success,
+    ).toBe(false);
+    expect(
+      questionSetHttpWriteSchema.safeParse({
+        id: "local:c0a80600-0000-4000-8000-000000000001",
+        name: "ゲスト",
+        source: "filter",
+      }).success,
+    ).toBe(false);
   });
 });

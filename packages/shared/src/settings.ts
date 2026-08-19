@@ -28,7 +28,7 @@ export const REVEAL_SPEEDS = ["slow", "normal", "fast"] as const;
 export type RuleSet = {
   questionCount: number;
   genreFilter: GenrePlayFilter;
-  /** Reserved for Phase 10. Always null in Phase 8. */
+  /** Selected question set, or null to pick by genre filter. */
   questionSetId: string | null;
   correctPoints: number;
   missPenalty: MissPenaltySetting;

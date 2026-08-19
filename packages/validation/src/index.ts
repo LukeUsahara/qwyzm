@@ -15,6 +15,8 @@ import {
   MIN_MISS_POINTS,
   MIN_QUESTIONS_PER_GAME,
   MISS_PENALTIES,
+  QUESTION_SET_SOURCES,
+  QUESTION_SET_VISIBILITIES,
   REVEAL_SPEEDS,
   USER_SETTINGS_VERSION,
   WIN_CONDITIONS,
@@ -130,7 +132,7 @@ export const catalogQuestionWriteSchema = z
     { message: "同じ入力解が重複しています" },
   );
 
-const genrePlayFilterSchema = z.object({
+export const genrePlayFilterSchema = z.object({
   allMain: z.boolean(),
   selectedGenreIds: z.array(uuidSchema),
   includeUnique: z.boolean(),
@@ -145,7 +147,13 @@ export const ruleSetSchema = z.object({
     includeUnique: DEFAULT_GENRE_PLAY_FILTER.includeUnique,
     selectedUniqueGenreIds: [...DEFAULT_GENRE_PLAY_FILTER.selectedUniqueGenreIds],
   }),
-  questionSetId: uuidSchema.nullable().default(null),
+  questionSetId: z
+    .union([
+      uuidSchema,
+      z.string().regex(/^local:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i),
+    ])
+    .nullable()
+    .default(null),
   correctPoints: correctPointsSchema,
   missPenalty: z.enum(MISS_PENALTIES),
   missPoints: z.number().int().min(MIN_MISS_POINTS),
@@ -206,4 +214,32 @@ export function migrateSettings(raw: unknown): UserSettings {
   });
   return parsed.success ? parsed.data : DEFAULT_USER_SETTINGS;
 }
+
+export const localQuestionSetIdSchema = z
+  .string()
+  .regex(
+    /^local:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    "local set id",
+  );
+
+export const questionSetRefSchema = z.union([uuidSchema, localQuestionSetIdSchema]);
+
+export const questionSetWriteSchema = z.object({
+  id: questionSetRefSchema.optional(),
+  name: z.string().trim().min(1).max(80),
+  visibility: z.enum(QUESTION_SET_VISIBILITIES).default("private"),
+  source: z.enum(QUESTION_SET_SOURCES),
+  criteria: genrePlayFilterSchema.default({
+    allMain: DEFAULT_GENRE_PLAY_FILTER.allMain,
+    selectedGenreIds: [...DEFAULT_GENRE_PLAY_FILTER.selectedGenreIds],
+    includeUnique: DEFAULT_GENRE_PLAY_FILTER.includeUnique,
+    selectedUniqueGenreIds: [...DEFAULT_GENRE_PLAY_FILTER.selectedUniqueGenreIds],
+  }),
+  questionIds: z.array(uuidSchema).default([]),
+});
+
+export const questionSetHttpWriteSchema = questionSetWriteSchema.extend({
+  id: uuidSchema.optional(),
+});
+
 

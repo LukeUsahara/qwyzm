@@ -2,6 +2,7 @@ import {
   DEFAULT_RULE_SET,
   MAX_QUESTIONS_PER_GAME,
   MIN_QUESTIONS_PER_GAME,
+  isLocalQuestionSetId,
   type GenrePlayFilter,
   type ImplementedWrongAnswerRule,
   type MissPenaltySetting,
@@ -28,6 +29,7 @@ type SessionState = {
   revealSpeed: RevealSpeed;
   wrongAnswerRule: ImplementedWrongAnswerRule;
   maxRereads: number;
+  questionSetId: string | null;
   setDisplayName: (displayName: string) => void;
   setQuestionCount: (questionCount: number) => void;
   setGenreFilter: (genreFilter: GenrePlayFilter) => void;
@@ -36,6 +38,7 @@ type SessionState = {
   setWrongAnswerRule: (wrongAnswerRule: ImplementedWrongAnswerRule) => void;
   setMissPenalty: (missPenalty: MissPenaltySetting) => void;
   setWinCondition: (winCondition: WinConditionSetting) => void;
+  setQuestionSetId: (questionSetId: string | null) => void;
   applyRuleSet: (ruleSet: RuleSet) => void;
   setUser: (user: { id: string; name: string; handle: string; role: UserRole }) => void;
   setGuest: () => void;
@@ -64,6 +67,7 @@ export const useSession = create<SessionState>((set) => ({
   revealSpeed: DEFAULT_RULE_SET.revealSpeed,
   wrongAnswerRule: DEFAULT_RULE_SET.wrongAnswerRule,
   maxRereads: DEFAULT_RULE_SET.maxRereads,
+  questionSetId: DEFAULT_RULE_SET.questionSetId,
   setDisplayName: (displayName) => set({ displayName }),
   setQuestionCount: (questionCount) =>
     set({
@@ -75,10 +79,12 @@ export const useSession = create<SessionState>((set) => ({
   setWrongAnswerRule: (wrongAnswerRule) => set({ wrongAnswerRule }),
   setMissPenalty: (missPenalty) => set({ missPenalty }),
   setWinCondition: (winCondition) => set({ winCondition }),
+  setQuestionSetId: (questionSetId) => set({ questionSetId }),
   applyRuleSet: (ruleSet) =>
     set({
       questionCount: clampCount(ruleSet.questionCount),
       genreFilter: ruleSet.genreFilter,
+      questionSetId: ruleSet.questionSetId,
       correctPoints: ruleSet.correctPoints,
       missPenalty: ruleSet.missPenalty,
       missPoints: ruleSet.missPoints,
@@ -89,12 +95,16 @@ export const useSession = create<SessionState>((set) => ({
       maxRereads: ruleSet.maxRereads,
     }),
   setUser: (user) =>
-    set({
+    set((state) => ({
       userId: user.id,
       displayName: user.name,
       handle: user.handle,
       role: user.role === "admin" ? "admin" : "user",
-    }),
+      questionSetId:
+        state.questionSetId !== null && isLocalQuestionSetId(state.questionSetId)
+          ? null
+          : state.questionSetId,
+    })),
   setGuest: () =>
     set({
       userId: null,

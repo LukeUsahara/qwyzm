@@ -2,6 +2,7 @@ import { serve } from "@hono/node-server";
 import {
   createDrizzlePlayRepository,
   createDrizzleQuestionRepository,
+  createDrizzleQuestionSetRepository,
   openCatalogDatabase,
 } from "@qwyzm/db";
 import { createApp, accountRoleOf, type AuthGateway, type AuthUser } from "./app.ts";
@@ -34,6 +35,7 @@ const questions = createDrizzleQuestionRepository(catalog.db);
 const app = createApp(questions, {
   auth: gateway,
   plays: (userId) => createDrizzlePlayRepository(catalog.db, userId),
+  questionSets: createDrizzleQuestionSetRepository(catalog.db),
 });
 
 serve({ fetch: app.fetch, port }, (info) => {
