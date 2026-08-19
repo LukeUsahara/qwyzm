@@ -23,7 +23,10 @@ describe("RoomManager", () => {
     const back = rooms.join("s3", host.room.code, "Guest2", guest.player.reconnectToken);
     expect(back.player.id).toBe(guest.player.id);
     expect(back.player.seatIndex).toBe(guest.player.seatIndex);
-    expect(back.player.displayName).toBe("Guest");
+    expect(back.player.displayName).toBe("Guest2");
+    rooms.disconnect("s3");
+    const resumed = rooms.join("s4", host.room.code, "", guest.player.reconnectToken);
+    expect(resumed.player.displayName).toBe("Guest2");
 
     expect(() => rooms.updateRules(guest.player.id, DEFAULT_RULE_SET)).toThrow("forbidden");
     expect(() => rooms.kick(guest.player.id, host.player.id)).toThrow("forbidden");

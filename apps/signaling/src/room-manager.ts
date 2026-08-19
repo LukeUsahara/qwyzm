@@ -164,6 +164,9 @@ export function createRoomManager(options: { random?: () => number } = {}) {
         bySocket.delete(existing.socketId);
         existing.connected = true;
         existing.socketId = socketId;
+        if (displayName.length > 0) {
+          existing.displayName = displayName;
+        }
         bySocket.set(socketId, existing.id);
         byPlayer.set(existing.id, room.code);
         return { room: snapshot(room), player: publicPlayer(existing) };

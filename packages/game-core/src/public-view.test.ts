@@ -36,6 +36,7 @@ describe("toPublicGameView", () => {
     expect(json.includes(SECRET)).toBe(false);
     expect(pub.revealedFullText).toBeNull();
     expect(pub.correctAnswer).toBeNull();
+    expect(pub.questionId).toBeNull();
     expect(pub.myAnswerInput).toBe("");
   });
 
@@ -67,5 +68,6 @@ describe("toPublicGameView", () => {
     });
     expect(view.phase).toBe("reading");
     expect(pub.revealedAt).toBe(view.readingStartedAt);
+    expect(pub.questionId).toBeNull();
   });
 });

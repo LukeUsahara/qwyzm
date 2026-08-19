@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { PlayerIntent, PublicGameView, QuestionPlayRecord } from "@qwyzm/game-core";
+import {
+  createOffsetSyncedClock,
+  type PlayerIntent,
+  type PublicGameView,
+  type QuestionPlayRecord,
+} from "@qwyzm/game-core";
 import type { Genre, RoomSnapshot, RuleSet } from "@qwyzm/shared";
 import {
   createRoomConnection,
@@ -28,9 +33,10 @@ export function RoomScreen({ displayName, ruleSet, genres, onClose }: Props) {
   const [matchEnded, setMatchEnded] = useState(false);
   const [records, setRecords] = useState<QuestionPlayRecord[]>([]);
   const conn = useRef<ReturnType<typeof createRoomConnection> | null>(null);
-  const offsetRef = useRef(0);
+  const clockRef = useRef(createOffsetSyncedClock({ now: () => Date.now() }, 0));
   const seqRef = useRef(0);
   const inputRef = useRef("");
+  const lastInputAtRef = useRef(0);
   const roomRef = useRef<RoomSnapshot | null>(null);
   const tokenRef = useRef<string | null>(null);
   const resumedRef = useRef(false);
@@ -59,7 +65,7 @@ export function RoomScreen({ displayName, ruleSet, genres, onClose }: Props) {
       }
       if (event.type === "pong") {
         const next = probeOffset(event.t0, event.t1, event.t2);
-        offsetRef.current = next;
+        clockRef.current = createOffsetSyncedClock({ now: () => Date.now() }, next);
         setOffsetMs(next);
         return;
       }
@@ -139,7 +145,7 @@ export function RoomScreen({ displayName, ruleSet, genres, onClose }: Props) {
   }, [room]);
 
   const sendIntent = (intent: PlayerIntent) => {
-    const clientTime = Date.now() + offsetRef.current;
+    const clientTime = clockRef.current.syncedNow();
     if (intent.type === "BUZZ") {
       seqRef.current += 1;
       conn.current?.send({ type: "buzz", clientTime, seq: seqRef.current });
@@ -151,6 +157,11 @@ export function RoomScreen({ displayName, ruleSet, genres, onClose }: Props) {
     }
     if (intent.type === "ANSWER_INPUT") {
       inputRef.current = intent.value;
+      const now = Date.now();
+      if (now - lastInputAtRef.current < 100) {
+        return;
+      }
+      lastInputAtRef.current = now;
       conn.current?.send({ type: "answer_input", text: intent.value, clientTime });
       return;
     }

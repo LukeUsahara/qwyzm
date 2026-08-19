@@ -16,6 +16,12 @@
 - PlayScreen を `playerId` + `sendIntent` で再利用
 - start 時は接続中のみ参加。試合中 join 不可
 
+## 補足
+
+- ping の `t1 − t0` は時計ずれを含む。RTT 半値は 250ms で上限。新しい WS メッセージは足さない
+- 解答入力待ち（`answeringWaitInput`）中の切断はエンジンの期限切れに任せる。入力中（`answering`）は即誤答
+- reveal 前の `questionId` / `fullText` / 答えは送らない
+
 ## 含まないもの
 
 遅延補償の作り込み、演出、対戦履歴の永続化、`/room/:code`、ランダムマッチ。

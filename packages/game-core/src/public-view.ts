@@ -65,7 +65,7 @@ export function toPublicGameView(
     phase: view.phase,
     questionIndex: view.questionIndex,
     questionCount: view.questionCount,
-    questionId: view.questionId,
+    questionId: reveal ? view.questionId : null,
     questionNumber: view.questionNumber,
     genreIds: [...view.genreIds],
     questionTextVisible: view.questionTextVisible,

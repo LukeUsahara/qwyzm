@@ -134,7 +134,7 @@ export function createSignalingServer(options: { loadQuestions?: PlayQuestionsLo
             const joined = rooms.join(
               socketId,
               parsed.data.roomCode,
-              parsed.data.type === "join" ? parsed.data.displayName : "player",
+              parsed.data.type === "join" ? parsed.data.displayName : "",
               parsed.data.reconnectToken,
             );
             roomByPlayer.set(joined.player.id, joined.room.code);
@@ -347,6 +347,8 @@ export function createSignalingServer(options: { loadQuestions?: PlayQuestionsLo
       const playerId = rooms.playerIdForSocket(socketId);
       const room = rooms.disconnect(socketId);
       sockets.delete(socketId);
+      rtts.delete(socketId);
+      hits.delete(socketId);
       if (playerId && room) {
         matches.get(room.code)?.disconnect(playerId);
         broadcastRoom(room);

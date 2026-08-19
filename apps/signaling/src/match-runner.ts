@@ -119,7 +119,16 @@ export function createMatchRunner(params: {
     });
   };
 
-  const broadcast = () => {
+  const dropPending = (playerId: string) => {
+    const existing = inputTimers.get(playerId);
+    if (existing !== undefined) {
+      scheduler.clearTimeout(existing);
+      inputTimers.delete(playerId);
+    }
+    pendingInput.delete(playerId);
+  };
+
+  const broadcast = (force = false) => {
     const now = clock.syncedNow();
     const view = engine.getView(now);
     version += 1;
@@ -129,8 +138,9 @@ export function createMatchRunner(params: {
       scores: view.players.map((player) => [player.id, player.score]),
       answering: view.answeringPlayerId,
       visible: view.visibleText,
+      connections: params.players.map((player) => [player.id, connections.get(player.id)]),
     });
-    if (encoded === lastJson) {
+    if (!force && encoded === lastJson) {
       version -= 1;
     } else {
       lastJson = encoded;
@@ -248,14 +258,22 @@ export function createMatchRunner(params: {
       if (connections.get(playerId) !== "connected") {
         return;
       }
+      dropPending(playerId);
       connections.set(playerId, "disconnected");
       params.emitConnection(playerId, "disconnected");
-      const view = engine.getView(clock.syncedNow());
-      if (view.answeringPlayerId === playerId) {
-        engine.dispatch(playerId, { type: "ANSWER_SUBMIT" }, clock.syncedNow());
+      const now = clock.syncedNow();
+      const view = engine.getView(now);
+      if (view.answeringPlayerId === playerId && view.phase === "answering") {
+        engine.dispatch(playerId, { type: "ANSWER_INPUT", value: "" }, now);
+        engine.dispatch(playerId, { type: "ANSWER_SUBMIT" }, now);
+        const still = engine.getView(now);
+        if (still.phase === "answering" && still.answeringPlayerId === playerId) {
+          const gauge = still.gauges.find((item) => item.kind === "answerSubmit");
+          engine.tick(now + (gauge?.remainingMs ?? 0) + 1);
+        }
       }
       if (connectedCount() <= 1) {
-        broadcast();
+        broadcast(true);
         finish("opponents_left");
         return;
       }
@@ -263,11 +281,11 @@ export function createMatchRunner(params: {
         if (connections.get(playerId) === "disconnected") {
           connections.set(playerId, "withdrawn");
           params.emitConnection(playerId, "withdrawn");
-          broadcast();
+          broadcast(true);
         }
       }, WITHDRAW_MS);
       withdrawTimers.set(playerId, timerId);
-      broadcast();
+      broadcast(true);
     },
     resume(playerId: string) {
       const current = connections.get(playerId);
@@ -281,7 +299,7 @@ export function createMatchRunner(params: {
       }
       connections.set(playerId, "connected");
       params.emitConnection(playerId, "connected");
-      broadcast();
+      broadcast(true);
     },
     stop() {
       ended = true;
