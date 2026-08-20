@@ -16,6 +16,7 @@ import {
 } from "../../rooms/connection.ts";
 import { VersusPlayContainer } from "../play/VersusPlayContainer.tsx";
 import { useSavePlay } from "../../play-data/useSavePlay.ts";
+import { roomErrorMessage } from "../../rooms/errors.ts";
 
 type Props = {
   displayName: string;
@@ -24,9 +25,18 @@ type Props = {
   userId: string | null;
   onClose: () => void;
   onSaved?: () => void;
+  onMatchLock?: (locked: boolean) => void;
 };
 
-export function RoomScreen({ displayName, ruleSet, genres, userId, onClose, onSaved }: Props) {
+export function RoomScreen({
+  displayName,
+  ruleSet,
+  genres,
+  userId,
+  onClose,
+  onSaved,
+  onMatchLock,
+}: Props) {
   const [codeInput, setCodeInput] = useState("");
   const [room, setRoom] = useState<RoomSnapshot | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
@@ -110,7 +120,7 @@ export function RoomScreen({ displayName, ruleSet, genres, userId, onClose, onSa
         return;
       }
       if (event.type === "error") {
-        setError(event.code);
+        setError(roomErrorMessage(event.code));
       }
     };
     const connect = (resume?: { roomCode: string; reconnectToken: string }) => {
@@ -160,6 +170,12 @@ export function RoomScreen({ displayName, ruleSet, genres, userId, onClose, onSa
     }, 2000);
     return () => window.clearInterval(id);
   }, [room]);
+
+  useEffect(() => {
+    const locked = playerId !== null && matchView !== null && !matchEnded;
+    onMatchLock?.(locked);
+    return () => onMatchLock?.(false);
+  }, [matchEnded, matchView, onMatchLock, playerId]);
 
   const sendIntent = (intent: PlayerIntent) => {
     const clientTime = clockRef.current.syncedNow();
@@ -263,19 +279,25 @@ export function RoomScreen({ displayName, ruleSet, genres, userId, onClose, onSa
             <input
               value={codeInput}
               onChange={(event) => setCodeInput(event.target.value.toUpperCase())}
+              aria-label="部屋コード"
               className="w-full border-b border-line bg-transparent py-2 text-lg outline-none"
             />
           </label>
           <button
             type="button"
-            onClick={() =>
+            onClick={() => {
+              const code = codeInput.trim();
+              if (code.length === 0) {
+                setError("部屋コードを入力してください");
+                return;
+              }
               conn.current?.send({
                 type: "join",
                 displayName,
-                roomCode: codeInput.trim(),
-                reconnectToken: rememberedReconnect(codeInput.trim()),
-              })
-            }
+                roomCode: code,
+                reconnectToken: rememberedReconnect(code),
+              });
+            }}
             className="self-start border border-line px-8 py-3 text-sm tracking-[0.3em] text-paper"
           >
             参加
@@ -284,7 +306,7 @@ export function RoomScreen({ displayName, ruleSet, genres, userId, onClose, onSa
       ) : (
         <div className="flex flex-col gap-4">
           <p className="text-sm text-paper">
-            コード <span className="text-gold">{room.code}</span>
+            コード <span className="text-gold" data-testid="room-code">{room.code}</span>
           </p>
           <p className="text-[11px] text-muted">
             {room.status === "starting"
@@ -294,7 +316,7 @@ export function RoomScreen({ displayName, ruleSet, genres, userId, onClose, onSa
                 : "ロビー"}
             {` / 時計補正 ${Math.round(offsetMs)}ms`}
           </p>
-          <ul className="space-y-2">
+          <ul className="space-y-2" data-testid="room-players">
             {room.players.map((player) => (
               <li key={player.id} className="flex items-center justify-between border border-line px-3 py-2 text-sm">
                 <span className="text-paper">

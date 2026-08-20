@@ -166,7 +166,7 @@ function SetGroup({
     <section className="space-y-3">
       <h2 className="text-[11px] tracking-widest text-muted">{title}</h2>
       {sets.length === 0 ? (
-        <p className="text-sm text-muted">まだありません</p>
+        <p className="text-sm text-muted">まだ問題セットがありません。</p>
       ) : (
         <ul className="space-y-2">
           {sets.map((set) => {

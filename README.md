@@ -2,7 +2,7 @@
 
 Webブラウザで動作する早押しクイズゲーム。
 
-現在は Phase 11：権威 WebSocket のカスタム部屋（ロビー・開始直前）まで実装済み。次は Phase 12：対戦ゲームループ。手元開発の既定 DB は PGlite です。
+一人練習・カスタム部屋・履歴/分析・設定まで動きます。対戦結果も履歴に残ります。手元開発の既定 DB は PGlite です。見た目と SE は未着手です。
 
 ## 開発（Docker 不要）
 
@@ -48,7 +48,10 @@ pnpm test
 pnpm typecheck
 pnpm lint
 pnpm build
+pnpm test:e2e
 ```
+
+`test:e2e` は一時ディレクトリの PGlite で API / signaling / web を立て、一人練習 1 試合と部屋 1 試合を最後まで進めます。初回は Playwright の Chromium が必要です（`pnpm exec playwright install chromium`）。
 
 ## ドキュメント
 
@@ -69,5 +72,8 @@ pnpm build
 | [docs/phase-7.md](docs/phase-7.md) | Phase 7 履歴とプロフィール実データ |
 | [docs/phase-10.md](docs/phase-10.md) | Phase 10 問題セット |
 | [docs/phase-11.md](docs/phase-11.md) | Phase 11 権威 WS 部屋 |
+| [docs/phase-12.md](docs/phase-12.md) | Phase 12 対戦ゲームループ |
+| [docs/phase-13.md](docs/phase-13.md) | Phase 13 対戦成績の履歴 |
+| [docs/phase-14.md](docs/phase-14.md) | Phase 14 製品としての締め |
 | [docs/roadmap.md](docs/roadmap.md) | v1 完成までのフェーズ内訳 |
 | [docs/spec-issues.md](docs/spec-issues.md) | 確定した仕様 |

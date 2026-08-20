@@ -4,7 +4,11 @@ import { authClient } from "../../auth/client.js";
 
 type Mode = "login" | "signup";
 
-export function AuthPanel() {
+type Props = {
+  locked?: boolean;
+};
+
+export function AuthPanel({ locked = false }: Props) {
   const { data: session, isPending } = authClient.useSession();
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
@@ -24,7 +28,8 @@ export function AuthPanel() {
         <p className="text-xs text-muted">{session.user.email}</p>
         <button
           type="button"
-          className="border border-line px-3 py-1.5 text-xs tracking-widest text-muted"
+          className="border border-line px-3 py-1.5 text-xs tracking-widest text-muted disabled:opacity-40"
+          disabled={locked}
           onClick={() => void authClient.signOut()}
         >
           ログアウト
@@ -68,6 +73,10 @@ export function AuthPanel() {
 
   return (
     <form onSubmit={(event) => void onSubmit(event)} className="space-y-3">
+      {locked ? (
+        <p className="text-[11px] text-muted">試合中はアカウントを切り替えられません</p>
+      ) : null}
+      <fieldset disabled={locked} className="space-y-3 disabled:opacity-40">
       <div className="flex gap-2">
         <button
           type="button"
@@ -122,11 +131,12 @@ export function AuthPanel() {
       {error ? <p className="text-xs text-bad">{error}</p> : null}
       <button
         type="submit"
-        disabled={busy}
+        disabled={busy || locked}
         className="border border-gold px-3 py-1.5 text-xs tracking-widest text-gold disabled:opacity-50"
       >
         {mode === "login" ? "ログイン" : "登録する"}
       </button>
+      </fieldset>
     </form>
   );
 }

@@ -139,9 +139,9 @@ visibleCount = min(
 | --- | --- |
 | `resumeFromBuzzPosition` | 誤答者をこの問題でロック。本文を押下位置から再開。他者は押せる |
 | `endQuestion` | 問題を終了して結果表示。一人練習デフォルト |
-| `noOneElse` | 型のみ。未実装 |
-| `rereadFromStart` | 型のみ。未実装 |
-| `nextFastest` | 型のみ。未実装 |
+| `noOneElse` | 誤答者をロック。本文は再開せず、未ロック者は同じ位置のまま早押し可 |
+| `rereadFromStart` | 誤答者をロックし、本文を先頭から読み直す。上限超過で終了 |
+| `nextFastest` | 同一問題の押下順キューの次の人だけに解答権。キューが尽きたら終了 |
 
 ロックされたプレイヤーは、その問題では `BUZZ` を無視する。
 

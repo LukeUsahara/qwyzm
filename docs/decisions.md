@@ -54,7 +54,9 @@ interface SyncedClock extends Clock {
 
 本番のローカル時計は `performance.now()`。テストは偽時計。
 
-## ADR-005: 対戦は WebRTC を維持し、星型にする
+## ADR-005: 対戦は WebRTC を維持し、星型にする（廃止）
+
+**置き換え: [ADR-012](#adr-012-対戦の権威は-webrtc-ホストではなく-websocket-サーバーにする)。** Phase 11 以降は権威 WebSocket。
 
 16 人フルメッシュは DataChannel が最大 120 本になり、ホスト移譲も難しい。
 

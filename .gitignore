@@ -15,3 +15,4 @@ test-results
 .vscode/*
 !.vscode/extensions.json
 packages/db/data
+tests/e2e/.data

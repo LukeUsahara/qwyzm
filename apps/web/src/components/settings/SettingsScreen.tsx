@@ -167,7 +167,7 @@ export function SettingsScreen({ onClose }: Props) {
       </label>
 
       <section className="space-y-4">
-        <h2 className="text-[11px] tracking-widest text-muted">音量（保持のみ）</h2>
+        <h2 className="text-[11px] tracking-widest text-muted">音量（SE は未実装。値だけ保持します）</h2>
         <VolumeSlider
           label="マスター"
           value={settings.volume.master}

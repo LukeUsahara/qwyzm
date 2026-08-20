@@ -67,6 +67,7 @@ export function App() {
   const [play, setPlay] = useState<ActivePlay | null>(null);
   const [viewName, setViewName] = useState<MainView>("home");
   const [historyTick, setHistoryTick] = useState(0);
+  const [roomLocked, setRoomLocked] = useState(false);
   const view = useGameView(play?.engine ?? null);
   const repo = useMemo(
     () => createHttpQuestionRepository({ baseUrl: "/api" }),
@@ -253,6 +254,9 @@ export function App() {
     });
   };
 
+  const navLocked =
+    roomLocked || Boolean(play && view && view.phase !== "gameOver");
+
   return (
     <div className="flex h-full min-h-0">
       <ProfilePanel
@@ -260,6 +264,7 @@ export function App() {
         handle={handle}
         role={role}
         genreStats={genreStats}
+        navLocked={navLocked}
         onOpenHome={openHome}
         onOpenHistory={openHistory}
         onOpenSettings={openSettings}
@@ -316,6 +321,7 @@ export function App() {
             userId={userId}
             onClose={openHome}
             onSaved={() => setHistoryTick((token) => token + 1)}
+            onMatchLock={setRoomLocked}
           />
         ) : play && view ? (
           <PlayScreen

@@ -74,7 +74,7 @@ apps/signaling --+----> packages/game-core     |
                  +----> packages/validation ---+
 ```
 
-`play-data` は `QuestionRepository` / `PlayRepository` の抽象を持つ。ゲーム規則はストレージを知らない。問題の実体は PostgreSQL、一人練習の成績はまだブラウザ内。
+`play-data` は `QuestionRepository` / `PlayRepository` の抽象を持つ。ゲーム規則はストレージを知らない。問題の実体は PostgreSQL（手元既定は PGlite）。成績はログイン中だけ DB、ゲストは localStorage。混ぜない。
 
 禁止:
 
@@ -113,7 +113,7 @@ Zustand に置いてはいけないもの:
 +------------------+----------------------------------+
 ```
 
-Phase 1 のプロフィールはプレースホルダ。レーダーとフレンドは枠だけ。
+プロフィールのレーダーは実プレイから集計する。フレンドは v1 対象外（部屋コード招待）。
 
 問題文は出題中（`reading` / `waitingBuzz`）だけ描画する。`answering*` では DOM にも残さない。
 

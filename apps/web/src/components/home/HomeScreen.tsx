@@ -13,7 +13,7 @@ export function HomeScreen({ onSolo, onHistory, onSettings, onSets, onRoom }: Pr
         <p className="text-[11px] tracking-[0.4em] text-gold">QWYZM</p>
         <h1 className="mt-2 font-serif text-4xl text-paper">ホーム</h1>
         <p className="mt-3 text-sm leading-relaxed text-muted">
-          早押しの練習と分析が本体です。同じ規則で、あとから部屋対戦もつながります。
+          早押しの練習と分析が本体です。同じ規則で部屋対戦もできます。
         </p>
       </div>
 
@@ -48,7 +48,7 @@ export function HomeScreen({ onSolo, onHistory, onSettings, onSets, onRoom }: Pr
           className="border border-line px-8 py-4 text-left"
         >
           <p className="text-sm tracking-[0.3em] text-paper">履歴</p>
-          <p className="mt-1 text-xs text-muted">過去の練習を見返す</p>
+          <p className="mt-1 text-xs text-muted">過去のプレイを見返す</p>
         </button>
         <button
           type="button"

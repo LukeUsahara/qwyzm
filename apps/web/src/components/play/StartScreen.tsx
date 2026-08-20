@@ -111,7 +111,7 @@ export function StartScreen({
       return;
     }
     if (poolSize < 1) {
-      setError("このジャンルには問題がありません");
+      setError("この条件では出題できる問題がありません。");
       return;
     }
     setError(null);
@@ -184,7 +184,11 @@ export function StartScreen({
           {selectedSet.source === "filter" ? "ジャンル指定のセット" : "問題を指定したセット"}を使います。
         </p>
       )}
-      <p className="text-[11px] text-muted">対象 {poolSize} 問</p>
+      {poolSize < 1 ? (
+        <p className="text-sm text-bad">この条件では出題できる問題がありません。</p>
+      ) : (
+        <p className="text-[11px] text-muted">対象 {poolSize} 問</p>
+      )}
 
       <label className="block space-y-2">
         <span className="text-[11px] tracking-widest text-muted">
@@ -283,7 +287,7 @@ export function StartScreen({
 
       <button
         type="submit"
-        disabled={busy}
+        disabled={busy || poolSize < 1}
         className="self-start border border-gold px-8 py-3 text-sm tracking-[0.3em] text-gold disabled:opacity-50"
       >
         開始

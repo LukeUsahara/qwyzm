@@ -8,6 +8,7 @@ type Props = {
   handle: string;
   role: UserRole;
   genreStats: GenreStats[];
+  navLocked?: boolean;
   onOpenHome: () => void;
   onOpenHistory: () => void;
   onOpenSettings: () => void;
@@ -20,6 +21,7 @@ export function ProfilePanel({
   handle,
   role,
   genreStats,
+  navLocked = false,
   onOpenHome,
   onOpenHistory,
   onOpenSettings,
@@ -52,28 +54,32 @@ export function ProfilePanel({
           <button
             type="button"
             onClick={onOpenHome}
-            className="border border-line px-3 py-1.5 text-xs tracking-widest text-paper"
+            disabled={navLocked}
+            className="border border-line px-3 py-1.5 text-xs tracking-widest text-paper disabled:opacity-40"
           >
             ホーム
           </button>
           <button
             type="button"
             onClick={onOpenHistory}
-            className="border border-line px-3 py-1.5 text-xs tracking-widest text-paper"
+            disabled={navLocked}
+            className="border border-line px-3 py-1.5 text-xs tracking-widest text-paper disabled:opacity-40"
           >
             履歴
           </button>
           <button
             type="button"
             onClick={onOpenSets}
-            className="border border-line px-3 py-1.5 text-xs tracking-widest text-paper"
+            disabled={navLocked}
+            className="border border-line px-3 py-1.5 text-xs tracking-widest text-paper disabled:opacity-40"
           >
             問題セット
           </button>
           <button
             type="button"
             onClick={onOpenSettings}
-            className="border border-line px-3 py-1.5 text-xs tracking-widest text-paper"
+            disabled={navLocked}
+            className="border border-line px-3 py-1.5 text-xs tracking-widest text-paper disabled:opacity-40"
           >
             設定
           </button>
@@ -82,12 +88,13 @@ export function ProfilePanel({
 
       <section>
         <h2 className="mb-3 text-[11px] tracking-[0.25em] text-muted">アカウント</h2>
-        <AuthPanel />
+        <AuthPanel locked={navLocked} />
         {role === "admin" && onOpenAdmin ? (
           <button
             type="button"
             onClick={onOpenAdmin}
-            className="mt-3 border border-gold px-3 py-1.5 text-xs tracking-widest text-gold"
+            disabled={navLocked}
+            className="mt-3 border border-gold px-3 py-1.5 text-xs tracking-widest text-gold disabled:opacity-40"
           >
             公式問題を編集
           </button>
@@ -96,7 +103,9 @@ export function ProfilePanel({
 
       <section className="flex-1">
         <h2 className="mb-3 text-[11px] tracking-[0.25em] text-muted">フレンド</h2>
-        <p className="text-sm text-muted">まだいません</p>
+        <p className="text-sm text-muted">
+          v1 ではフレンド機能はありません。部屋コードで招待してください。
+        </p>
       </section>
     </aside>
   );
@@ -126,6 +135,10 @@ function GenreRadar({ stats }: { stats: GenreStats[] }) {
 
   return (
     <div className="space-y-3">
+      {stats.length === 0 ? (
+        <p className="text-sm text-muted">まだプレイがありません</p>
+      ) : (
+        <>
       <svg viewBox="0 0 180 180" className="w-full text-muted">
         {ring.length > 0 ? (
           <polygon points={ring.join(" ")} fill="none" stroke="currentColor" strokeOpacity="0.35" />
@@ -160,6 +173,8 @@ function GenreRadar({ stats }: { stats: GenreStats[] }) {
           </li>
         ))}
       </ul>
+        </>
+      )}
     </div>
   );
 }
