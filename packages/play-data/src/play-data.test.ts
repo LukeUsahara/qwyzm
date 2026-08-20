@@ -19,6 +19,7 @@ import {
   summarizeByGenre,
   summarizeProfile,
 } from "./stats.ts";
+import { createStoredGame, storedGameModeFromDb, storedGameModeToDb } from "./map-from-engine.ts";
 import { toPlayQuestion, type StoredAttempt, type StoredGame } from "./types.ts";
 
 const HISTORY = "c0a80200-0000-4000-8000-000000000001";
@@ -101,6 +102,47 @@ describe("PlayRepository save/load", () => {
     });
     const repo = createJsonPlayRepository(store);
     expect(await repo.listGames()).toEqual([]);
+  });
+});
+
+describe("createStoredGame", () => {
+  it("keeps match mode and maps play records 1:1", () => {
+    const stored = createStoredGame({
+      id: "c0a80400-0000-4000-8000-0000000000aa",
+      mode: "match",
+      startedAt: "2026-01-01T00:00:00.000Z",
+      selectedGenreIds: [],
+      score: 2,
+      records: [
+        {
+          questionId: QUESTION_A,
+          questionIndex: 0,
+          questionBody: "本文",
+          playerId: "p1",
+          result: "correct",
+          answerRaw: "こたえ",
+          answerReveal: "答え",
+          buzzTimeMs: 400,
+          buzzCharIndex: 4,
+          buzzRank: 1,
+          answerStartMs: 200,
+          answerSubmitMs: 1500,
+          closeCount: 0,
+          genreIds: [SCIENCE],
+        },
+      ],
+    });
+    expect(stored.mode).toBe("match");
+    expect(stored.attempts).toHaveLength(1);
+    expect(stored.attempts[0]?.buzzCharIndex).toBe(4);
+    expect(stored.attempts[0]?.buzzTimeMs).toBe(400);
+  });
+
+  it("maps match onto the existing custom_room column", () => {
+    expect(storedGameModeToDb("match")).toBe("custom_room");
+    expect(storedGameModeFromDb("custom_room")).toBe("match");
+    expect(storedGameModeFromDb("match")).toBe("match");
+    expect(storedGameModeToDb("solo")).toBe("solo");
   });
 });
 
@@ -283,7 +325,7 @@ describe("compareQuestionBuzz", () => {
     expect(describeQuestionBuzz(comparison!)).toBe("平均より4.6文字遅く押しました");
   });
 
-  it("includes custom_room history for the same questionId only", () => {
+  it("includes match history for the same questionId only", () => {
     const previous = [
       game("solo-old", "2026-01-01T00:00:00.000Z", [
         attempt({ id: "p1", questionId: QUESTION_A, buzzCharIndex: 12 }),
@@ -293,7 +335,7 @@ describe("compareQuestionBuzz", () => {
           attempt({ id: "p2", questionId: QUESTION_A, buzzCharIndex: 8 }),
           attempt({ id: "p3", questionId: QUESTION_B, buzzCharIndex: 1 }),
         ]),
-        mode: "custom_room" as const,
+        mode: "match" as const,
       },
     ];
     const [questionA] = compareQuestionBuzz(

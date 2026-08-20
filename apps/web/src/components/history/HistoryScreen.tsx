@@ -48,7 +48,7 @@ export function HistoryScreen({ games, loading, error, genres, onClose }: Props)
         attempts={selected.attempts}
         genres={genres}
         heading={formatEndedAt(selected.endedAt)}
-        kicker={selected.mode === "custom_room" ? "MATCH HISTORY" : "HISTORY"}
+        kicker={selected.mode === "match" ? "MATCH HISTORY" : "HISTORY"}
         onBack={() => setSelectedId(null)}
         backLabel="一覧へ"
       />
@@ -60,7 +60,7 @@ export function HistoryScreen({ games, loading, error, genres, onClose }: Props)
       <header>
         <p className="text-[11px] tracking-[0.4em] text-gold">HISTORY</p>
         <h1 className="mt-2 font-serif text-4xl text-paper">履歴</h1>
-        <p className="mt-3 text-sm text-muted">過去の一人練習と対戦を見返せます。</p>
+        <p className="mt-3 text-sm text-muted">過去のプレイを見返せます。</p>
       </header>
       {error ? <p className="text-sm text-bad">{error}</p> : null}
       {loading && games.length === 0 ? (
@@ -81,7 +81,7 @@ export function HistoryScreen({ games, loading, error, genres, onClose }: Props)
                   <span className="block text-[11px] text-muted">
                     {formatEndedAt(game.endedAt)}
                     {" / "}
-                    {game.mode === "custom_room" ? "対戦" : "一人"}
+                    {game.mode === "match" ? "対戦" : "一人"}
                   </span>
                   <span className="mt-1 block text-sm text-paper">
                     {game.score}点 / {game.questionCount}問 / 正解率{" "}

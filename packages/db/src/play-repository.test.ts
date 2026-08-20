@@ -176,7 +176,7 @@ describe("drizzle PlayRepository", () => {
     await client.close();
   });
 
-  it("lets two users store the same custom_room match without mixing attempts", async () => {
+  it("lets two users store the same match without mixing attempts", async () => {
     const { client, db } = await createSeededDb();
     const alice = createDrizzlePlayRepository(db, USER_A);
     const bob = createDrizzlePlayRepository(db, USER_B);
@@ -192,7 +192,7 @@ describe("drizzle PlayRepository", () => {
             buzzCharIndex: 4,
           }),
         ],
-        { mode: "custom_room", score: 1, seatIndex: 0, rank: 1 },
+        { mode: "match", score: 1, seatIndex: 0, rank: 1 },
       ),
     );
     await bob.saveGame(
@@ -210,13 +210,13 @@ describe("drizzle PlayRepository", () => {
             genreIds: [...pearl.genreIds],
           }),
         ],
-        { mode: "custom_room", score: 0, seatIndex: 1, rank: 2 },
+        { mode: "match", score: 0, seatIndex: 1, rank: 2 },
       ),
     );
     const aliceGames = await alice.listGames();
     const bobGames = await bob.listGames();
     expect(aliceGames).toHaveLength(1);
-    expect(aliceGames[0]?.mode).toBe("custom_room");
+    expect(aliceGames[0]?.mode).toBe("match");
     expect(aliceGames[0]?.attempts).toHaveLength(1);
     expect(aliceGames[0]?.attempts[0]?.result).toBe("correct");
     expect(aliceGames[0]?.score).toBe(1);

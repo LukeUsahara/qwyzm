@@ -28,10 +28,18 @@ export function attemptsFromPlayRecords(
   }));
 }
 
+export function storedGameModeFromDb(value: string): StoredGameMode {
+  return value === "custom_room" || value === "match" ? "match" : "solo";
+}
+
+export function storedGameModeToDb(mode: StoredGameMode): "solo" | "custom_room" {
+  return mode === "match" ? "custom_room" : "solo";
+}
+
 export function normalizeStoredGame(game: StoredGame): StoredGame {
   return {
     ...game,
-    mode: game.mode === "custom_room" ? "custom_room" : "solo",
+    mode: storedGameModeFromDb(game.mode),
     rank: game.rank ?? null,
     seatIndex: game.seatIndex ?? 0,
     selectedGenreIds: [...game.selectedGenreIds],

@@ -62,7 +62,7 @@ export type StoredAttempt = {
   closeCount: number;
 };
 
-export type StoredGameMode = "solo" | "custom_room";
+export type StoredGameMode = "solo" | "match";
 
 export type StoredGame = {
   id: string;

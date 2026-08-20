@@ -196,7 +196,7 @@ export function RoomScreen({ displayName, ruleSet, genres, userId, onClose, onSa
     selectedGenreIds,
     genres,
     userId,
-    mode: "custom_room",
+    mode: "match",
     score: matchScore,
     rank: matchRank,
     seatIndex: selfSeat,

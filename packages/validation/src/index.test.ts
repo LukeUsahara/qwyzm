@@ -11,6 +11,7 @@ import {
   roomRuleSetSchema,
   clientRoomMessageSchema,
   ruleSetSchema,
+  storedGameSchema,
 } from "./index.ts";
 import { DEFAULT_RULE_SET, DEFAULT_USER_SETTINGS } from "@qwyzm/shared";
 
@@ -166,5 +167,44 @@ describe("room protocol", () => {
         questionSetId: "local:c0a80600-0000-4000-8000-000000000001",
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("storedGameSchema", () => {
+  const attempt = {
+    id: "c0a80500-0000-4000-8000-000000000001",
+    gameId: "c0a80400-0000-4000-8000-000000000001",
+    questionId: "c0a80100-0000-4000-8000-000000000001",
+    questionIndex: 0,
+    questionBody: "本文",
+    genreIds: ["c0a80200-0000-4000-8000-000000000002"],
+    result: "correct" as const,
+    answerRaw: "こたえ",
+    answerReveal: "答え",
+    buzzTimeMs: 400,
+    buzzCharIndex: 4,
+    buzzRank: 1,
+    answerStartMs: 200,
+    answerSubmitMs: 1500,
+    closeCount: 0,
+  };
+  const base = {
+    id: "c0a80400-0000-4000-8000-000000000001",
+    startedAt: "2026-01-01T00:00:00.000Z",
+    endedAt: "2026-01-01T00:05:00.000Z",
+    selectedGenreIds: [],
+    questionCount: 1,
+    score: 1,
+    attempts: [attempt],
+  };
+
+  it("accepts match mode and rejects unknown modes or empty attempts", () => {
+    expect(storedGameSchema.safeParse({ ...base, mode: "solo" }).success).toBe(true);
+    expect(storedGameSchema.safeParse({ ...base, mode: "match" }).success).toBe(true);
+    expect(storedGameSchema.safeParse({ ...base, mode: "custom_room" }).success).toBe(false);
+    expect(storedGameSchema.safeParse({ ...base, mode: "versus" }).success).toBe(false);
+    expect(storedGameSchema.safeParse({ ...base, mode: "match", attempts: [] }).success).toBe(
+      false,
+    );
   });
 });

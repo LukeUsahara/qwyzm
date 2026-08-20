@@ -55,7 +55,7 @@ export {
 } from "./json-repository.ts";
 export type { KeyValueStore } from "./json-repository.ts";
 
-export { attemptsFromPlayRecords, createStoredGame, normalizeStoredGame } from "./map-from-engine.ts";
+export { attemptsFromPlayRecords, createStoredGame, normalizeStoredGame, storedGameModeFromDb, storedGameModeToDb } from "./map-from-engine.ts";
 
 export {
   analyzeSession,

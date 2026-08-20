@@ -92,7 +92,7 @@ export const storedAttemptSchema = z.object({
 
 export const storedGameSchema = z.object({
   id: uuidSchema,
-  mode: z.enum(["solo", "custom_room"]),
+  mode: z.enum(["solo", "match"]),
   startedAt: isoDateSchema,
   endedAt: isoDateSchema,
   selectedGenreIds: z.array(uuidSchema),

@@ -1,6 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { normalizeForJudge, SOLO_DEFAULT_SETTINGS } from "@qwyzm/game-core";
 import type { PlayRepository, StoredAttempt, StoredGame } from "@qwyzm/play-data";
+import { storedGameModeFromDb, storedGameModeToDb } from "@qwyzm/play-data";
 import type { AppDb } from "./client.ts";
 import {
   gamePlayers,
@@ -105,7 +106,7 @@ export function createDrizzlePlayRepository(
           const settings = row.settings ?? {};
           return {
             id: row.id,
-            mode: row.mode === "custom_room" ? "custom_room" : "solo",
+            mode: storedGameModeFromDb(row.mode),
             startedAt: toIso(row.startedAt),
             endedAt: toIso(row.endedAt),
             selectedGenreIds: settings.selectedGenreIds ?? [],
@@ -130,7 +131,7 @@ export function createDrizzlePlayRepository(
         if (existing === undefined) {
           await tx.insert(games).values({
             id: game.id,
-            mode: game.mode,
+            mode: storedGameModeToDb(game.mode),
             hostUserId: userId,
             questionCount: game.questionCount,
             winCondition: SOLO_DEFAULT_SETTINGS.winCondition,
@@ -148,7 +149,7 @@ export function createDrizzlePlayRepository(
           await tx
             .update(games)
             .set({
-              mode: game.mode,
+              mode: storedGameModeToDb(game.mode),
               questionCount: Math.max(existing.questionCount, game.questionCount),
               endedAt: toDate(game.endedAt),
             })

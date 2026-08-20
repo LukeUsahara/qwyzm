@@ -192,7 +192,7 @@ describe("play API", () => {
     expect(missing.status).toBe(404);
   });
 
-  it("accepts custom_room games for the signed-in user", async () => {
+  it("accepts match games for the signed-in user", async () => {
     const repo = createMemoryPlayRepository();
     const aliceApp = createApp(questions, {
       auth: fakeAuth(USER_A),
@@ -200,7 +200,7 @@ describe("play API", () => {
     });
     const payload = {
       ...sampleGame("c0a80400-0000-4000-8000-00000000bb01"),
-      mode: "custom_room",
+      mode: "match",
       rank: 2,
       seatIndex: 1,
     };
@@ -212,7 +212,7 @@ describe("play API", () => {
     expect(saved.status).toBe(200);
     const listed = await aliceApp.request("/api/games");
     const body = (await listed.json()) as { games: { mode: string; rank: number | null }[] };
-    expect(body.games[0]?.mode).toBe("custom_room");
+    expect(body.games[0]?.mode).toBe("match");
     expect(body.games[0]?.rank).toBe(2);
   });
 });
